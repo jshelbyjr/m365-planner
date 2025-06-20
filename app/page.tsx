@@ -22,7 +22,14 @@ export default function DashboardPage() {
     <div className="min-h-screen flex bg-gray-100">
       <Sidebar />
       <main className="flex-1 p-8">
-        <TotalsCards usersCount={users.length} m365GroupsCount={m365Groups.length} />
+        <TotalsCards
+          cards={[
+            { label: 'Total Users', count: users.length },
+            { label: 'Total M365 Groups', count: m365Groups.length },
+            // Add more cards here as needed, e.g.:
+            // { label: 'Total Security Groups', count: securityGroups.length },
+          ]}
+        />
         {/* DataTables moved to their own pages */}
       </main>
     </div>
