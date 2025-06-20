@@ -28,12 +28,25 @@ export default function UsersPage() {
   // Fetch latest scan status for users
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
       const res = await fetch('/api/scan');
-      if (res.ok) setScanStatus(await res.json());
+      if (res.ok) {
+        const status = await res.json();
+        setScanStatus(status);
+        // If scan just completed, refresh users
+        if (status.status === 'COMPLETED') {
+          const usersRes = await fetch('/api/data/users');
+          if (usersRes.ok) setUsers(await usersRes.json());
+        }
+      }
     };
     fetchScanStatus();
-  }, []);
+    if (scanStatus?.status === 'IN_PROGRESS') {
+      interval = setInterval(fetchScanStatus, 2000);
+    }
+    return () => clearInterval(interval);
+  }, [scanStatus?.status]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });

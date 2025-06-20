@@ -30,12 +30,28 @@ export default function GroupsPage() {
   // Fetch latest scan status for groups
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
       const res = await fetch('/api/scan');
-      if (res.ok) setScanStatus(await res.json());
+      if (res.ok) {
+        const status = await res.json();
+        setScanStatus(status);
+        // If scan just completed, refresh groups
+        if (status.status === 'COMPLETED') {
+          const groupsRes = await fetch('/api/data/groups');
+          if (groupsRes.ok) {
+            const { m365Groups } = await groupsRes.json();
+            setGroups(m365Groups);
+          }
+        }
+      }
     };
     fetchScanStatus();
-  }, []);
+    if (scanStatus?.status === 'IN_PROGRESS') {
+      interval = setInterval(fetchScanStatus, 2000);
+    }
+    return () => clearInterval(interval);
+  }, [scanStatus?.status]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
