@@ -1,11 +1,10 @@
 // file: app/api/scan/route.ts
-import { PrismaClient } from '@prisma/client';
 import type { M365Group, SecurityGroup } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedClient } from '@/app/lib/graph.service';
 import type { Group, User } from '@microsoft/microsoft-graph-types';
 
-const prisma = new PrismaClient();
 
 // GET handler to check the current scan status
 export async function GET() {
