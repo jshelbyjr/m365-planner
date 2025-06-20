@@ -17,6 +17,33 @@ export default function DashboardPage() {
   const [m365Groups, setM365Groups] = useState<Group[]>([]);
   const [securityGroups, setSecurityGroups] = useState<Group[]>([]);
 
+  // Fetch users and groups on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch('/api/users');
+        if (res.ok) {
+          setUsers(await res.json());
+        }
+      } catch (e) {
+        // Optionally handle error
+      }
+    };
+    const fetchGroups = async () => {
+      try {
+        const res = await fetch('/api/groups');
+        if (res.ok) {
+          setM365Groups(await res.json());
+        }
+      } catch (e) {
+        // Optionally handle error
+      }
+    };
+    fetchUsers();
+    fetchGroups();
+    // Add more fetches here for future cards/routes
+  }, []);
+
 
   return (
     <div className="min-h-screen flex bg-gray-100">
