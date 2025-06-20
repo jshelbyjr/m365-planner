@@ -48,4 +48,4 @@ EXPOSE 3000
 
 # The command to run the application
 # Note: We run the migration command here to ensure the database is created on first start
-CMD ["sh", "-c", "npx prisma migrate deploy && node_modules/.bin/next start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db push && node_modules/.bin/next start"]
