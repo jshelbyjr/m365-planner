@@ -50,19 +50,23 @@ export async function POST(request: Request) {
 // This function runs the data collection process for the requested type.
 async function runScanInBackground(dataType: 'users' | 'groups') {
   try {
+    console.log("Starting scan for", dataType);
     const client = await getAuthenticatedClient();
 
     if (dataType === 'users') {
       // Clear old users
       await prisma.user.deleteMany({});
+      console.log("Deleted old users");
       // Fetch Users
       const users: User[] = [];
       let usersResponse = await client.api('/users').select('id,displayName,userPrincipalName,accountEnabled,department,jobTitle').get();
+      console.log("First usersResponse", usersResponse);
       users.push(...usersResponse.value);
       while(usersResponse['@odata.nextLink']) {
         usersResponse = await client.api(usersResponse['@odata.nextLink']).get();
         users.push(...usersResponse.value);
       }
+      console.log("Total users fetched:", users.length);
       await prisma.user.createMany({
         data: users.map(u => ({
           id: u.id!,
@@ -73,6 +77,7 @@ async function runScanInBackground(dataType: 'users' | 'groups') {
           jobTitle: u.jobTitle,
         })),
       });
+      console.log("Inserted users into DB");
     } else if (dataType === 'groups') {
       // Clear old groups
       await prisma.m365Group.deleteMany({});
@@ -118,6 +123,7 @@ async function runScanInBackground(dataType: 'users' | 'groups') {
 
   } catch (e: any) {
     // Mark scan as failed
+    console.error("Scan failed:", e);
     await prisma.scanLog.update({
       where: { id: 1 },
       data: { status: 'FAILED', completedAt: new Date(), error: e.message },
