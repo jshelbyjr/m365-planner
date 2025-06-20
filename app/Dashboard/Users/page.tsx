@@ -2,6 +2,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import DataTable from '../../Components/DataTable';
+import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 
 type User = {
   id: string;
@@ -14,6 +15,7 @@ type User = {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -22,6 +24,30 @@ export default function UsersPage() {
     };
     fetchUsers();
   }, []);
+
+  // Fetch latest scan status for users
+  useEffect(() => {
+    const fetchScanStatus = async () => {
+      const res = await fetch('/api/data/users/scan-status');
+      if (res.ok) setScanStatus(await res.json());
+    };
+    fetchScanStatus();
+  }, []);
+
+  const handleStartScan = async () => {
+    setScanStatus({ status: 'IN_PROGRESS' });
+    const res = await fetch('/api/data/users/scan', { method: 'POST' });
+    if (res.ok) {
+      // Optionally refetch users after scan
+      const usersRes = await fetch('/api/data/users');
+      if (usersRes.ok) setUsers(await usersRes.json());
+      // Refetch scan status
+      const statusRes = await fetch('/api/data/users/scan-status');
+      if (statusRes.ok) setScanStatus(await statusRes.json());
+    } else {
+      setScanStatus({ status: 'FAILED', error: 'Scan failed' });
+    }
+  };
 
   // Define columns to display in the DataTable
   const columns = [
@@ -35,6 +61,22 @@ export default function UsersPage() {
   return (
     <main className="p-8">
       <h1 className="text-2xl font-bold mb-4">Users</h1>
+      <div className="mb-6">
+        <DataCollectionCard
+          scanStatus={scanStatus}
+          onStartScan={handleStartScan}
+          renderStatus={() => (
+            <>
+              {scanStatus?.status === 'COMPLETED' && scanStatus.completedAt && (
+                <span className="text-green-600">Last scan: {new Date(scanStatus.completedAt).toLocaleString()}</span>
+              )}
+              {scanStatus?.status === 'FAILED' && (
+                <span className="text-red-600">Error: {scanStatus.error}</span>
+              )}
+            </>
+          )}
+        />
+      </div>
       <DataTable
         title={`Users (${users.length})`}
         data={users}

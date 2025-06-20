@@ -22,10 +22,12 @@ model Configuration {
   updatedAt    DateTime @updatedAt
 }
 
-// Model to track the status of data collection scans
-model Scan {
-  id          Int      @id @default(1)
-  status      String // e.g., "IDLE", "IN_PROGRESS", "COMPLETED", "FAILED"
+
+// Model to track the status and times of data collection scans per data type
+model ScanLog {
+  id          Int      @id @default(autoincrement())
+  dataType    String  // e.g., "users", "groups"
+  status      String  // e.g., "IDLE", "IN_PROGRESS", "COMPLETED", "FAILED"
   startedAt   DateTime?
   completedAt DateTime?
   error       String?

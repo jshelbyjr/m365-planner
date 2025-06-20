@@ -9,23 +9,23 @@ const prisma = new PrismaClient();
 
 // GET handler to check the current scan status
 export async function GET() {
-  const scan = await prisma.scan.findUnique({ where: { id: 1 } }) ?? await prisma.scan.create({data: {id: 1, status: 'IDLE'}});
+  const scan = await prisma.scanLog.findUnique({ where: { id: 1 } }) ?? await prisma.scanLog.create({data: {id: 1, status: 'IDLE', dataType: 'groups'}});
   return NextResponse.json(scan);
 }
 
 // POST handler to start a new scan
 export async function POST() {
   // Check if a scan is already in progress
-  const currentScan = await prisma.scan.findUnique({ where: { id: 1 } });
+  const currentScan = await prisma.scanLog.findUnique({ where: { id: 1 } });
   if (currentScan?.status === 'IN_PROGRESS') {
     return NextResponse.json({ message: 'A scan is already in progress.' }, { status: 409 });
   }
 
   // Immediately update the scan status and return a response
-  await prisma.scan.upsert({
+  await prisma.scanLog.upsert({
     where: { id: 1 },
     update: { status: 'IN_PROGRESS', startedAt: new Date(), completedAt: null, error: null },
-    create: { id: 1, status: 'IN_PROGRESS', startedAt: new Date() },
+    create: { id: 1, status: 'IN_PROGRESS', startedAt: new Date(), dataType: 'groups' },
   });
 
   // Fire off the background scan process but don't wait for it to finish
@@ -107,14 +107,14 @@ async function runScanInBackground() {
     await prisma.securityGroup.createMany({ data: securityGroups });
 
     // Mark scan as completed
-    await prisma.scan.update({
+    await prisma.scanLog.update({
       where: { id: 1 },
       data: { status: 'COMPLETED', completedAt: new Date() },
     });
 
   } catch (e: any) {
     // Mark scan as failed
-    await prisma.scan.update({
+    await prisma.scanLog.update({
       where: { id: 1 },
       data: { status: 'FAILED', completedAt: new Date(), error: e.message },
     });
