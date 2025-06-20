@@ -28,9 +28,10 @@ export default function GroupsPage() {
   }, []);
 
   // Fetch latest scan status for groups
+
   useEffect(() => {
     const fetchScanStatus = async () => {
-      const res = await fetch('/api/data/groups/scan-status');
+      const res = await fetch('/api/scan');
       if (res.ok) setScanStatus(await res.json());
     };
     fetchScanStatus();
@@ -38,7 +39,11 @@ export default function GroupsPage() {
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
-    const res = await fetch('/api/data/groups/scan', { method: 'POST' });
+    const res = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataType: 'groups' })
+    });
     if (res.ok) {
       // Optionally refetch groups after scan
       const groupsRes = await fetch('/api/data/groups');
@@ -47,7 +52,7 @@ export default function GroupsPage() {
         setGroups(m365Groups);
       }
       // Refetch scan status
-      const statusRes = await fetch('/api/data/groups/scan-status');
+      const statusRes = await fetch('/api/scan');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
       setScanStatus({ status: 'FAILED', error: 'Scan failed' });

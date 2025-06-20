@@ -26,9 +26,10 @@ export default function UsersPage() {
   }, []);
 
   // Fetch latest scan status for users
+
   useEffect(() => {
     const fetchScanStatus = async () => {
-      const res = await fetch('/api/data/users/scan-status');
+      const res = await fetch('/api/scan');
       if (res.ok) setScanStatus(await res.json());
     };
     fetchScanStatus();
@@ -36,13 +37,17 @@ export default function UsersPage() {
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
-    const res = await fetch('/api/data/users/scan', { method: 'POST' });
+    const res = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataType: 'users' })
+    });
     if (res.ok) {
       // Optionally refetch users after scan
       const usersRes = await fetch('/api/data/users');
       if (usersRes.ok) setUsers(await usersRes.json());
       // Refetch scan status
-      const statusRes = await fetch('/api/data/users/scan-status');
+      const statusRes = await fetch('/api/scan');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
       setScanStatus({ status: 'FAILED', error: 'Scan failed' });

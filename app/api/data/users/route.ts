@@ -6,13 +6,7 @@ const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   // If path is /scan-status, return latest scan status for users
-  if (request.url.endsWith('/scan-status')) {
-    const latest = await prisma.scanLog.findFirst({
-      where: { dataType: 'users' },
-      orderBy: { startedAt: 'desc' },
-    });
-    return NextResponse.json(latest);
-  }
+  // Removed scan-status logic
   // Default: return users
   const users = await prisma.user.findMany();
   return NextResponse.json(users);

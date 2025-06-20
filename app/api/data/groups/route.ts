@@ -6,13 +6,7 @@ const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   // If path is /scan-status, return latest scan status for groups
-  if (request.url.endsWith('/scan-status')) {
-    const latest = await prisma.scanLog.findFirst({
-      where: { dataType: 'groups' },
-      orderBy: { startedAt: 'desc' },
-    });
-    return NextResponse.json(latest);
-  }
+  // Removed scan-status logic
   // Default: return groups
   const m365Groups = await prisma.m365Group.findMany();
   const securityGroups = await prisma.securityGroup.findMany();
