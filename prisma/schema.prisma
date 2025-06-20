@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Model for storing the M365 App Registration configuration
+model Configuration {
+  id           Int     @id @default(1) // Only ever one row
+  tenantId     String
+  clientId     String
+  clientSecret String
+  // Add createdAt/updatedAt for tracking when it was last updated
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Model to track the status of data collection scans
+model Scan {
+  id          Int      @id @default(1)
+  status      String // e.g., "IDLE", "IN_PROGRESS", "COMPLETED", "FAILED"
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+}
+
+// Model for M365 Users
+model User {
+  id                String  @id @unique // Graph ID
+  displayName       String?
+  userPrincipalName String?
+  accountEnabled    Boolean?
+  department        String?
+  jobTitle          String?
+}
+
+// Model for M365 Groups (formerly Office 365 Groups)
+model M365Group {
+  id            String  @id @unique // Graph ID
+  displayName   String?
+  mailNickname  String?
+  memberCount   Int?
+  visibility    String? // Public or Private
+}
+
+// Model for Security and Distribution Groups
+model SecurityGroup {
+  id                  String  @id @unique // Graph ID
+  displayName         String?
+  isDistributionGroup Boolean // true for Distribution, false for Security
+  memberCount         Int?
+}
