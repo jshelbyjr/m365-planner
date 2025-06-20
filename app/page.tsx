@@ -2,19 +2,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import * as NavigationMenu from '@radix-ui/react-navigation-menu';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import CardHeader from '@mui/material/CardHeader';
-import Typography from '@mui/material/Typography';
+import Sidebar from './Components/Sidebar';
+import DataCollectionCard, { ScanStatus } from './Components/DataCollectionCard';
+import TotalsCards from './Components/TotalsCards';
+import DataTable from './Components/DataTable';
 
 // Define types for our data
-type ScanStatus = {
-  status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
-  startedAt?: string;
-  completedAt?: string;
-  error?: string;
-};
+
 type User = { id: string; displayName: string; userPrincipalName: string; accountEnabled: boolean };
 type Group = { id: string; displayName: string };
 
@@ -94,110 +88,20 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen flex bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col min-h-screen">
-        <div className="p-6 border-b">
-          <h1 className="text-2xl font-bold text-gray-800">Migration Dashboard</h1>
-        </div>
-        <NavigationMenu.Root orientation="vertical" className="flex flex-col gap-2 p-4">
-          <NavigationMenu.List className="flex flex-col gap-2">
-            <NavigationMenu.Item>
-              <NavigationMenu.Link className="block px-4 py-2 rounded hover:bg-indigo-100 text-gray-700 font-medium" href="#">Tenant Info</NavigationMenu.Link>
-            </NavigationMenu.Item>
-            <NavigationMenu.Item>
-              <NavigationMenu.Link className="block px-4 py-2 rounded hover:bg-indigo-100 text-gray-700 font-medium" href="#">Users</NavigationMenu.Link>
-            </NavigationMenu.Item>
-            <NavigationMenu.Item>
-              <NavigationMenu.Link className="block px-4 py-2 rounded hover:bg-indigo-100 text-gray-700 font-medium" href="#">Microsoft Teams</NavigationMenu.Link>
-            </NavigationMenu.Item>
-            <NavigationMenu.Item>
-              <NavigationMenu.Link className="block px-4 py-2 rounded hover:bg-indigo-100 text-gray-700 font-medium" href="#">M365 Groups</NavigationMenu.Link>
-            </NavigationMenu.Item>
-            <NavigationMenu.Item>
-              <NavigationMenu.Link className="block px-4 py-2 rounded hover:bg-indigo-100 text-gray-700 font-medium" href="#">Distribution Lists</NavigationMenu.Link>
-            </NavigationMenu.Item>
-            <NavigationMenu.Item>
-              <NavigationMenu.Link className="block px-4 py-2 rounded hover:bg-indigo-100 text-gray-700 font-medium" href="#">SharePoint Sites</NavigationMenu.Link>
-            </NavigationMenu.Item>
-          </NavigationMenu.List>
-        </NavigationMenu.Root>
-        <div className="mt-auto p-4 border-t">
-          <a href="/settings" className="text-indigo-600 hover:underline text-sm">Configure Settings</a>
-        </div>
-      </aside>
-
-      {/* Main Content */}
+      <Sidebar />
       <main className="flex-1 p-8">
-        {/* Data Collection Card */}
         <div className="mb-8">
-          <Card className="p-6 rounded-lg shadow-md bg-white">
-            <CardHeader
-              title={<Typography variant="h6" className="mb-3">Data Collection</Typography>}
-              className="p-0 mb-3"
-            />
-            <CardContent className="p-0">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleStartScan}
-                  disabled={scanStatus?.status === 'IN_PROGRESS'}
-                  className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {scanStatus?.status === 'IN_PROGRESS' ? 'Scanning...' : 'Start New Scan'}
-                </button>
-                <div className="flex-grow">{renderStatus()}</div>
-              </div>
-            </CardContent>
-          </Card>
+          <DataCollectionCard
+            scanStatus={scanStatus}
+            onStartScan={handleStartScan}
+            renderStatus={renderStatus}
+          />
         </div>
-
-        {/* Totals Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-          <Card className="p-6 rounded-lg shadow-md bg-white flex flex-col items-center">
-            <CardHeader
-              title={<Typography variant="subtitle1" className="text-lg font-semibold text-gray-700">Total Users</Typography>}
-              className="p-0 mb-2"
-            />
-            <CardContent className="p-0">
-              <span className="text-4xl font-bold text-indigo-600">{users.length}</span>
-            </CardContent>
-          </Card>
-          <Card className="p-6 rounded-lg shadow-md bg-white flex flex-col items-center">
-            <CardHeader
-              title={<Typography variant="subtitle1" className="text-lg font-semibold text-gray-700">Total M365 Groups</Typography>}
-              className="p-0 mb-2"
-            />
-            <CardContent className="p-0">
-              <span className="text-4xl font-bold text-indigo-600">{m365Groups.length}</span>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Data Display Sections (tables) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <DataTable title={`Users (${users.length})`} data={users} displayKey="userPrincipalName" />
-          <DataTable title={`M365 Groups (${m365Groups.length})`} data={m365Groups} displayKey="displayName" />
-        </div>
+        <TotalsCards usersCount={users.length} m365GroupsCount={m365Groups.length} />
+        {/* DataTables moved to their own pages */}
       </main>
     </div>
   );
 }
 
-// A simple reusable table component
-function DataTable({ title, data, displayKey }: { title: string, data: any[], displayKey: string }) {
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h3 className="font-semibold text-lg mb-4">{title}</h3>
-      <div className="overflow-y-auto h-96 border rounded-md">
-        <table className="min-w-full divide-y divide-gray-200">
-          <tbody className="bg-white divide-y divide-gray-200">
-            {data.map((item) => (
-              <tr key={item.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item[displayKey]}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+// ...existing code...
