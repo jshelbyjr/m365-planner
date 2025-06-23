@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Sidebar from './Components/Sidebar';
 import DataCollectionCard, { ScanStatus } from './Components/DataCollectionCard';
 import TotalsCards from './Components/TotalsCards';
 
@@ -21,7 +20,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch('/api/users');
+        const res = await fetch('/api/data/users');
         if (res.ok) {
           setUsers(await res.json());
         }
@@ -31,9 +30,10 @@ export default function DashboardPage() {
     };
     const fetchGroups = async () => {
       try {
-        const res = await fetch('/api/groups');
+        const res = await fetch('/api/data/groups');
         if (res.ok) {
-          setM365Groups(await res.json());
+        const data = await res.json();
+        setM365Groups(data.m365Groups || []);
         }
       } catch (e) {
         // Optionally handle error
@@ -47,7 +47,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen flex bg-gray-100">
-      <Sidebar />
       <main className="flex-1 p-8">
         <TotalsCards
           cards={[
