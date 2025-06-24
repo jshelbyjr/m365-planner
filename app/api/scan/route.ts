@@ -15,15 +15,23 @@ export async function GET() {
 // POST handler to start a new scan
 
 export async function POST(request: Request) {
+  // Supported scan types
+  const scanHandlers = getScanHandlers();
+  const supportedTypes = Object.keys(scanHandlers);
+
   // Parse dataType from request body (default to 'groups' for backward compatibility)
   let dataType = 'groups';
   try {
     const body = await request.json();
-    if (body.dataType === 'users' || body.dataType === 'groups') {
+    if (typeof body.dataType === 'string' && supportedTypes.includes(body.dataType)) {
       dataType = body.dataType;
     }
   } catch (e) {
     // If no body or invalid JSON, fallback to default
+  }
+
+  if (!supportedTypes.includes(dataType)) {
+    return NextResponse.json({ message: `Unsupported scan type: ${dataType}` }, { status: 400 });
   }
 
   // Check if a scan is already in progress
@@ -40,87 +48,34 @@ export async function POST(request: Request) {
   });
 
   // Fire off the background scan process but don't wait for it to finish
-  runScanInBackground(dataType as 'users' | 'groups');
+  runScanInBackground(dataType, scanHandlers);
 
   return NextResponse.json({ message: 'Scan started.' }, { status: 202 });
 }
 
 
 
-// This function runs the data collection process for the requested type.
-async function runScanInBackground(dataType: 'users' | 'groups') {
+// Handler mapping for scan types
+function getScanHandlers() {
+  return {
+    users: handleUsersScan,
+    groups: handleGroupsScan,
+    // Add more types here as needed
+  };
+}
+
+// Main scan runner, dispatches to the correct handler
+async function runScanInBackground(dataType: string, scanHandlers: Record<string, () => Promise<void>>) {
   try {
     console.log("Starting scan for", dataType);
-    const client = await getAuthenticatedClient();
-
-    if (dataType === 'users') {
-      // Clear old users
-      await prisma.user.deleteMany({});
-      console.log("Deleted old users");
-      // Fetch Users
-      const users: User[] = [];
-      let usersResponse = await client.api('/users').select('id,displayName,userPrincipalName,accountEnabled,department,jobTitle').get();
-      console.log("First usersResponse", usersResponse);
-      users.push(...usersResponse.value);
-      while(usersResponse['@odata.nextLink']) {
-        usersResponse = await client.api(usersResponse['@odata.nextLink']).get();
-        users.push(...usersResponse.value);
-      }
-      console.log("Total users fetched:", users.length);
-      await prisma.user.createMany({
-        data: users.map(u => ({
-          id: u.id!,
-          displayName: u.displayName,
-          userPrincipalName: u.userPrincipalName,
-          accountEnabled: u.accountEnabled,
-          department: u.department,
-          jobTitle: u.jobTitle,
-        })),
-      });
-      console.log("Inserted users into DB");
-    } else if (dataType === 'groups') {
-      // Clear old groups
-      await prisma.m365Group.deleteMany({});
-      await prisma.securityGroup.deleteMany({});
-      // Fetch Groups
-      const m365Groups: M365Group[] = [];
-      const securityGroups: SecurityGroup[] = [];
-      let groupsResponse = await client.api('/groups').select('id,displayName,groupTypes,mailNickname,securityEnabled,visibility').get();
-      const processGroups = (groups: Group[]) => {
-        for (const group of groups) {
-          if (group.groupTypes?.includes('Unified')) {
-            m365Groups.push({
-              id: group.id!,
-              displayName: group.displayName ?? null,
-              mailNickname: group.mailNickname ?? null,
-              visibility: group.visibility ?? null,
-              memberCount: null
-            });
-          } else if (group.securityEnabled) {
-            securityGroups.push({
-              id: group.id!,
-              displayName: group.displayName ?? null,
-              isDistributionGroup: !group.securityEnabled,
-              memberCount: null
-            });
-          }
-        }
-      };
-      processGroups(groupsResponse.value);
-      while(groupsResponse['@odata.nextLink']) {
-        groupsResponse = await client.api(groupsResponse['@odata.nextLink']).get();
-        processGroups(groupsResponse.value);
-      }
-      await prisma.m365Group.createMany({ data: m365Groups });
-      await prisma.securityGroup.createMany({ data: securityGroups });
-    }
-
+    const handler = scanHandlers[dataType];
+    if (!handler) throw new Error(`No handler for scan type: ${dataType}`);
+    await handler();
     // Mark scan as completed
     await prisma.scanLog.update({
       where: { id: 1 },
       data: { status: 'COMPLETED', completedAt: new Date() },
     });
-
   } catch (e: any) {
     // Mark scan as failed
     console.error("Scan failed:", e);
@@ -130,4 +85,72 @@ async function runScanInBackground(dataType: 'users' | 'groups') {
     });
     console.error("Scan failed:", e);
   }
+}
+
+// Handler for users scan
+async function handleUsersScan() {
+  const client = await getAuthenticatedClient();
+  // Clear old users
+  await prisma.user.deleteMany({});
+  console.log("Deleted old users");
+  // Fetch Users
+  const users: User[] = [];
+  let usersResponse = await client.api('/users').select('id,displayName,userPrincipalName,accountEnabled,department,jobTitle').get();
+  console.log("First usersResponse", usersResponse);
+  users.push(...usersResponse.value);
+  while(usersResponse['@odata.nextLink']) {
+    usersResponse = await client.api(usersResponse['@odata.nextLink']).get();
+    users.push(...usersResponse.value);
+  }
+  console.log("Total users fetched:", users.length);
+  await prisma.user.createMany({
+    data: users.map(u => ({
+      id: u.id!,
+      displayName: u.displayName,
+      userPrincipalName: u.userPrincipalName,
+      accountEnabled: u.accountEnabled,
+      department: u.department,
+      jobTitle: u.jobTitle,
+    })),
+  });
+  console.log("Inserted users into DB");
+}
+
+// Handler for groups scan
+async function handleGroupsScan() {
+  const client = await getAuthenticatedClient();
+  // Clear old groups
+  await prisma.m365Group.deleteMany({});
+  await prisma.securityGroup.deleteMany({});
+  // Fetch Groups
+  const m365Groups: M365Group[] = [];
+  const securityGroups: SecurityGroup[] = [];
+  let groupsResponse = await client.api('/groups').select('id,displayName,groupTypes,mailNickname,securityEnabled,visibility').get();
+  const processGroups = (groups: Group[]) => {
+    for (const group of groups) {
+      if (group.groupTypes?.includes('Unified')) {
+        m365Groups.push({
+          id: group.id!,
+          displayName: group.displayName ?? null,
+          mailNickname: group.mailNickname ?? null,
+          visibility: group.visibility ?? null,
+          memberCount: null
+        });
+      } else if (group.securityEnabled) {
+        securityGroups.push({
+          id: group.id!,
+          displayName: group.displayName ?? null,
+          isDistributionGroup: !group.securityEnabled,
+          memberCount: null
+        });
+      }
+    }
+  };
+  processGroups(groupsResponse.value);
+  while(groupsResponse['@odata.nextLink']) {
+    groupsResponse = await client.api(groupsResponse['@odata.nextLink']).get();
+    processGroups(groupsResponse.value);
+  }
+  await prisma.m365Group.createMany({ data: m365Groups });
+  await prisma.securityGroup.createMany({ data: securityGroups });
 }
