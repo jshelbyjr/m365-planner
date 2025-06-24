@@ -11,11 +11,18 @@ type TotalsCardDef = {
 
 export default function TotalsCards({ cards }: { cards: TotalsCardDef[] }) {
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-${cards.length > 1 ? 2 : 1} gap-6 mb-8`}>
+    <div className="flex flex-wrap gap-6 mb-8">
       {cards.map((card, idx) => (
-        <Card key={card.label} className="p-6 rounded-lg shadow-md bg-white flex flex-col items-center">
+        <Card
+          key={card.label}
+          className="min-w-48 p-6 rounded-lg shadow-md bg-white flex flex-col items-center"
+        >
           <CardHeader
-            title={<Typography variant="subtitle1" className="text-lg font-semibold text-gray-700">{card.label}</Typography>}
+            title={
+              <Typography variant="subtitle1" className="text-lg font-semibold text-gray-700">
+                {card.label}
+              </Typography>
+            }
             className="p-0 mb-2"
           />
           <CardContent className="p-0">
