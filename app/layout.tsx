@@ -32,8 +32,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <MuiThemeProvider>
+          <div className="flex">
           <Sidebar />
-          {children}
+          <main className="flex-1 p-4">
+            {children}
+          </main>
+          </div>
         </MuiThemeProvider>
       </body>
     </html>
