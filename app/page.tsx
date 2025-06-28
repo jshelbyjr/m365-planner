@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DataCollectionCard, { ScanStatus } from './Components/DataCollectionCard';
-import TotalsCards, { TotalsCardDef } from './Components/TotalsCards';
+import { Box, Paper, Typography } from '@mui/material';
+import CollaborationChartCard, { ChartDataItem } from './Components/CollaborationChartCard';
 
 // Define types for our data
+
 type Domain = { id: string; status?: string };
 type User = { id: string; displayName: string; userPrincipalName: string; accountEnabled: boolean };
 type Group = { id: string; displayName: string };
@@ -17,7 +18,6 @@ type OneDrive = { id: string; ownerId?: string; ownerName?: string; siteName?: s
 
 
 export default function DashboardPage() {
-  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [m365Groups, setM365Groups] = useState<Group[]>([]);
@@ -44,7 +44,7 @@ export default function DashboardPage() {
     // M365 Groups
     fetch('/api/data/groups')
       .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch groups'))
-      .then(data => setM365Groups(Array.isArray(data) ? data : []))
+      .then(data => setM365Groups(Array.isArray(data?.m365Groups) ? data.m365Groups : []))
       .catch(() => setM365Groups([]));
 
     // Teams
@@ -75,14 +75,15 @@ export default function DashboardPage() {
 
 
 
-  // Calculate card data
+
+  // Calculate metrics for cards
   const totalDomains = domains.length;
   const verifiedDomains = domains.filter((d: Domain) => d.status?.toLowerCase() === 'verified').length;
-  const unverifiedDomains = domains.filter((d: Domain) => d.status?.toLowerCase() !== 'verified').length;
+  const unverifiedDomains = totalDomains - verifiedDomains;
 
   const totalUsers = users.length;
   const activeUsers = users.filter((u: User) => u.accountEnabled).length;
-  const disabledUsers = users.filter((u: User) => u.accountEnabled === false).length;
+  const disabledUsers = totalUsers - activeUsers;
 
   const totalOneDrives = oneDrives.length;
   const totalOneDriveStorage = oneDrives.reduce((sum: number, od: OneDrive) => sum + (typeof od.size === 'number' ? od.size : 0), 0) / (1024 ** 3); // bytes to GB
@@ -91,71 +92,130 @@ export default function DashboardPage() {
   const totalSharePointStorage = sharePointSites.reduce((sum: number, s: SharePointSite) => sum + (typeof s.storageUsed === 'number' ? s.storageUsed : 0), 0) / (1024 ** 3); // bytes to GB
 
   const totalGroups = m365Groups.length;
+  // For group and team storage, assume SharePoint site is associated by index (or add logic if available)
+  const groupStorage = sharePointSites.slice(0, totalGroups).reduce((sum, s) => sum + (typeof s.storageUsed === 'number' ? s.storageUsed : 0), 0) / (1024 ** 3);
+
   const totalTeams = teams.length;
+  const teamStorage = sharePointSites.slice(totalGroups, totalGroups + totalTeams).reduce((sum, s) => sum + (typeof s.storageUsed === 'number' ? s.storageUsed : 0), 0) / (1024 ** 3);
+
+  // The rest of SharePoint storage is for standalone sites
+  const standaloneSharePointStorage = totalSharePointStorage - groupStorage - teamStorage;
 
   // Licenses: unique SKUs and total assigned
   const uniqueSkus = new Set(licenses.map((l: any) => l.skuPartNumber)).size;
   const totalAssignedLicenses = licenses.reduce((sum: number, l: any) => sum + (typeof l.assignedUnits === 'number' ? l.assignedUnits : 0), 0);
 
-  const cards: TotalsCardDef[] = [
-    {
-      title: 'Domains',
-      data: [
-        { label: 'Total Domains', value: totalDomains },
-        { label: 'Verified', value: verifiedDomains },
-        { label: 'Unverified', value: unverifiedDomains },
-      ],
-    },
-    {
-      title: 'Users',
-      data: [
-        { label: 'Total', value: totalUsers },
-        { label: 'Active', value: activeUsers },
-        { label: 'Disabled', value: disabledUsers },
-      ],
-    },
-    {
-      title: 'OneDrive',
-      data: [
-        { label: 'Total Accounts', value: totalOneDrives },
-        { label: 'Total Storage', value: totalOneDriveStorage.toFixed(2), unit: 'GB' },
-      ],
-    },
-    {
-      title: 'SharePoint',
-      data: [
-        { label: 'Total Sites', value: totalSharePointSites },
-        { label: 'Total Storage', value: totalSharePointStorage.toFixed(2), unit: 'GB' },
-      ],
-    },
-    {
-      title: 'M365 Groups',
-      data: [
-        { label: 'Total Groups', value: totalGroups },
-      ],
-    },
-    {
-      title: 'Teams',
-      data: [
-        { label: 'Total Teams', value: totalTeams },
-      ],
-    },
-    {
-      title: 'Licenses',
-      data: [
-        { label: 'Unique SKUs', value: uniqueSkus },
-        { label: 'Total Assigned', value: totalAssignedLicenses },
-      ],
-    },
+  // Chart data for collaboration distribution (ensure M365 Groups is included)
+  const collabEntityChart: ChartDataItem[] = [
+    { name: 'M365 Groups', value: totalGroups },
+    { name: 'Microsoft Teams', value: totalTeams },
+    { name: 'SharePoint Sites', value: totalSharePointSites },
   ];
 
+  // Storage auto-scaling (TB, GB, MB)
+  const groupStorageRaw = groupStorage * 1024 ** 3; // bytes
+  const teamStorageRaw = teamStorage * 1024 ** 3; // bytes
+  const sharePointStorageRaw = standaloneSharePointStorage * 1024 ** 3; // bytes
+  const maxStorage = Math.max(groupStorageRaw, teamStorageRaw, sharePointStorageRaw);
+  let storageUnit = 'GB';
+  let divisor = 1024 ** 3;
+  if (maxStorage >= 1024 ** 4) {
+    storageUnit = 'TB';
+    divisor = 1024 ** 4;
+  } else if (maxStorage < 1024 ** 3 && maxStorage >= 1024 ** 2) {
+    storageUnit = 'MB';
+    divisor = 1024 ** 2;
+  }
+  const collabStorageChart: ChartDataItem[] = [
+    { name: 'M365 Groups', value: Number((groupStorageRaw / divisor).toFixed(2)) },
+    { name: 'Microsoft Teams', value: Number((teamStorageRaw / divisor).toFixed(2)) },
+    { name: 'SharePoint Sites', value: Number((sharePointStorageRaw / divisor).toFixed(2)) },
+  ];
+
+
+  // Layout: Tenant (Domains, Licenses, Users), Collaboration (SharePoint, OneDrive, M365 Groups, Teams, 2 chart cards)
   return (
-    <div className="min-h-screen flex bg-gray-100">
-      <main className="flex-1 p-8">
-        <TotalsCards cards={cards} />
-        {/* DataTables moved to their own pages */}
-      </main>
-    </div>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.100', py: 4, px: { xs: 1, sm: 4 } }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>Tenant Overview</Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+        {/* Domains */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 30%' }, minWidth: 280 }}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>Domains</Typography>
+            <Typography>Total: {totalDomains}</Typography>
+            <Typography color="success.main">Verified: {verifiedDomains}</Typography>
+            <Typography color="warning.main">Unverified: {unverifiedDomains}</Typography>
+          </Paper>
+        </Box>
+        {/* Licenses */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 30%' }, minWidth: 280 }}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>Licenses</Typography>
+            <Typography>Unique SKUs: {uniqueSkus}</Typography>
+            <Typography>Total Assigned: {totalAssignedLicenses}</Typography>
+          </Paper>
+        </Box>
+        {/* Users */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 30%' }, minWidth: 280 }}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>Users</Typography>
+            <Typography>Total: {totalUsers}</Typography>
+            <Typography color="success.main">Active: {activeUsers}</Typography>
+            <Typography color="error.main">Disabled: {disabledUsers}</Typography>
+          </Paper>
+        </Box>
+      </Box>
+
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>Collaboration</Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+        {/* SharePoint */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>SharePoint</Typography>
+            <Typography>Total Sites: {totalSharePointSites}</Typography>
+            <Typography>Total Storage: {totalSharePointStorage.toFixed(2)} GB</Typography>
+          </Paper>
+        </Box>
+        {/* OneDrive */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>OneDrive</Typography>
+            <Typography>Total Accounts: {totalOneDrives}</Typography>
+            <Typography>Total Storage: {totalOneDriveStorage.toFixed(2)} GB</Typography>
+          </Paper>
+        </Box>
+        {/* M365 Groups */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>M365 Groups</Typography>
+            <Typography>Total Groups: {totalGroups}</Typography>
+            <Typography>Total Storage: {groupStorage.toFixed(2)} GB</Typography>
+          </Paper>
+        </Box>
+        {/* Teams */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>Microsoft Teams</Typography>
+            <Typography>Total Teams: {totalTeams}</Typography>
+            <Typography>Total Storage: {teamStorage.toFixed(2)} GB</Typography>
+          </Paper>
+        </Box>
+        {/* Collaboration Distribution Chart */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 45%' }, minWidth: 320 }}>
+          <CollaborationChartCard
+            title="Collaboration Entity Distribution"
+            data={collabEntityChart}
+          />
+        </Box>
+        {/* Collaboration Storage Distribution Chart */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 45%' }, minWidth: 320 }}>
+          <CollaborationChartCard
+            title={`Collaboration Storage Distribution (${storageUnit})`}
+            data={collabStorageChart}
+          />
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
