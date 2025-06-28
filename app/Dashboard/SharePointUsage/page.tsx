@@ -78,18 +78,24 @@ export default function SharePointUsagePage() {
     {
       key: 'storageUsedBytes',
       label: 'Storage Used (GB)',
-      render: (row: SharePointSiteUsageDetail) =>
-        row.storageUsedBytes && !isNaN(Number(row.storageUsedBytes))
-          ? (Number(row.storageUsedBytes) / (1024 ** 3)).toFixed(2)
-          : '',
+      render: (row: SharePointSiteUsageDetail) => {
+        const val = row.storageUsedBytes;
+        if (val === undefined || val === null || val === '') return '';
+        const num = typeof val === 'bigint' ? Number(val) : Number(val);
+        if (isNaN(num)) return '';
+        return (num / (1024 ** 3)).toFixed(2);
+      },
     },
     {
       key: 'storageAllocatedBytes',
       label: 'Storage Allocated (GB)',
-      render: (row: SharePointSiteUsageDetail) =>
-        row.storageAllocatedBytes && !isNaN(Number(row.storageAllocatedBytes))
-          ? (Number(row.storageAllocatedBytes) / (1024 ** 3)).toFixed(2)
-          : '',
+      render: (row: SharePointSiteUsageDetail) => {
+        const val = row.storageAllocatedBytes;
+        if (val === undefined || val === null || val === '') return '';
+        const num = typeof val === 'bigint' ? Number(val) : Number(val);
+        if (isNaN(num)) return '';
+        return (num / (1024 ** 3)).toFixed(2);
+      },
     },
     { key: 'rootWebTemplate', label: 'Root Web Template' },
     { key: 'reportPeriod', label: 'Report Period' },
