@@ -11,7 +11,6 @@ type SharePointSiteUsageDetail = {
   siteId?: string;
   siteUrl?: string;
   siteName?: string;
-  ownerDisplayName?: string;
   isDeleted?: boolean;
   lastActivityDate?: string;
   fileCount?: number;
@@ -67,7 +66,6 @@ export default function SharePointUsagePage() {
   const columns = [
     { key: 'siteName', label: 'Site Name' },
     { key: 'siteUrl', label: 'Site URL' },
-    { key: 'ownerDisplayName', label: 'Owner Display Name' },
     { key: 'ownerPrincipalName', label: 'Owner Principal Name' },
     { key: 'isDeleted', label: 'Is Deleted' },
     { key: 'lastActivityDate', label: 'Last Activity Date' },
