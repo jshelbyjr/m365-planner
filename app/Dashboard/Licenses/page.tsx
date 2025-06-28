@@ -1,7 +1,10 @@
+
 "use client";
 import React, { useEffect, useState } from 'react';
-import { Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box } from '@mui/material';
+import { Typography, Box } from '@mui/material';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
+import DataTable from '../../Components/DataTable';
+import ExportCSVButton from '../../Components/ExportCSVButton';
 
 /**
  * LicenseDashboardPage - Displays Microsoft 365 license information in a table.
@@ -18,6 +21,17 @@ type License = {
   suspendedUnits?: number;
 };
 
+
+
+const LICENSE_COLUMNS = [
+  { key: 'skuPartNumber', label: 'SKU Part Number' },
+  { key: 'status', label: 'Status' },
+  { key: 'totalSeats', label: 'Total Seats' },
+  { key: 'consumedSeats', label: 'Consumed Seats' },
+  { key: 'availableSeats', label: 'Available Seats' },
+  { key: 'warningUnits', label: 'Warning Units' },
+  { key: 'suspendedUnits', label: 'Suspended Units' },
+];
 
 const LicenseDashboardPage = () => {
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -67,7 +81,6 @@ const LicenseDashboardPage = () => {
     }
   };
 
-
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
@@ -89,34 +102,18 @@ const LicenseDashboardPage = () => {
           )}
         />
       </Box>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>SKU Part Number</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Total Seats</TableCell>
-              <TableCell>Consumed Seats</TableCell>
-              <TableCell>Available Seats</TableCell>
-              <TableCell>Warning Units</TableCell>
-              <TableCell>Suspended Units</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {licenses.map((license) => (
-              <TableRow key={license.id}>
-                <TableCell>{license.skuPartNumber}</TableCell>
-                <TableCell>{license.status}</TableCell>
-                <TableCell>{license.totalSeats}</TableCell>
-                <TableCell>{license.consumedSeats}</TableCell>
-                <TableCell>{license.availableSeats}</TableCell>
-                <TableCell>{license.warningUnits}</TableCell>
-                <TableCell>{license.suspendedUnits}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Box display="flex" alignItems="center" mb={2}>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          License Data
+        </Typography>
+        <ExportCSVButton data={licenses} columns={LICENSE_COLUMNS} fileName="licenses.csv" />
+      </Box>
+      <DataTable
+        title="Licenses"
+        data={licenses}
+        columns={LICENSE_COLUMNS}
+        displayKey="skuPartNumber"
+      />
     </Box>
   );
 };
