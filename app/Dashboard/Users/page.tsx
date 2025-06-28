@@ -1,6 +1,7 @@
 // Users DataTable Page
 'use client';
 import { useEffect, useState } from 'react';
+import { useApiData } from '../../../lib/useApiData';
 import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
@@ -14,20 +15,10 @@ type User = {
   jobTitle?: string;
 };
 
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const { data: users, loading: usersLoading, error: usersError, refetch: refetchUsers } = useApiData<User[]>('/api/data/users');
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
-
-  // Fetch users helper
-  const fetchUsers = async () => {
-    const res = await fetch('/api/data/users');
-    if (res.ok) setUsers(await res.json());
-  };
-
-  // Fetch users on mount
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   // Fetch latest scan status for users
 
@@ -40,7 +31,7 @@ export default function UsersPage() {
         const status = await res.json();
         setScanStatus(status);
         if (status.status === 'COMPLETED') {
-          await fetchUsers();
+          refetchUsers();
         }
       }
     };
@@ -50,7 +41,7 @@ export default function UsersPage() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [scanStatus?.status]);
+  }, [scanStatus?.status, refetchUsers]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
@@ -60,7 +51,6 @@ export default function UsersPage() {
       body: JSON.stringify({ dataType: 'users' })
     });
     if (res.ok) {
-      // Start polling for scan status
       setScanStatus({ status: 'IN_PROGRESS' });
     } else {
       setScanStatus({ status: 'FAILED', error: 'Scan failed' });
@@ -81,7 +71,6 @@ export default function UsersPage() {
     const res = await fetch('/api/data/users');
     if (res.ok) {
       const data = await res.json();
-      // Some APIs may return { users: [...] }, others may return differently
       return data.users || data;
     }
     return [];
@@ -91,7 +80,7 @@ export default function UsersPage() {
     <main className="p-8">
       <h1 className="text-2xl font-bold mb-4 flex items-center">Users
         <ExportCSVButton
-          data={users}
+          data={users || []}
           columns={columns}
           fileName="users.csv"
           // Fetch all data on export
@@ -111,15 +100,19 @@ export default function UsersPage() {
               {scanStatus?.status === 'FAILED' && (
                 <span className="text-red-600">Error: {scanStatus.error}</span>
               )}
+              {usersError && (
+                <span className="text-red-600">Error: {usersError}</span>
+              )}
             </>
           )}
         />
       </div>
       <DataTable
-        title={`Users (${users.length})`}
-        data={users}
+        title={`Users (${users ? users.length : 0})`}
+        data={users || []}
         displayKey="userPrincipalName"
         columns={columns}
+        loading={usersLoading}
       />
     </main>
   );

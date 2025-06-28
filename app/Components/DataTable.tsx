@@ -16,9 +16,10 @@ interface DataTableProps {
   data: any[];
   displayKey: string;
   columns: Column[];
+  loading?: boolean;
 }
 
-export default function DataTable({ title, data, columns }: DataTableProps) {
+export default function DataTable({ title, data, columns, loading }: DataTableProps) {
   const [order, setOrder] = React.useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = React.useState<string>(columns[0]?.key || '');
 
@@ -71,17 +72,25 @@ export default function DataTable({ title, data, columns }: DataTableProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedData.map((item) => (
-              <TableRow key={item.id}>
-                {columns.map((col) => (
-                  <TableCell key={col.key}>
-                    {typeof item[col.key] === 'boolean'
-                      ? item[col.key] ? 'Yes' : 'No'
-                      : item[col.key] ?? ''}
-                  </TableCell>
-                ))}
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} align="center">
+                  Loading...
+                </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              sortedData.map((item) => (
+                <TableRow key={item.id}>
+                  {columns.map((col) => (
+                    <TableCell key={col.key}>
+                      {typeof item[col.key] === 'boolean'
+                        ? item[col.key] ? 'Yes' : 'No'
+                        : item[col.key] ?? ''}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
