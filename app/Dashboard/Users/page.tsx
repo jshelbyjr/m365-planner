@@ -18,16 +18,20 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
 
+  // Fetch users helper
+  const fetchUsers = async () => {
+    const res = await fetch('/api/data/users');
+    if (res.ok) setUsers(await res.json());
+  };
+
+  // Fetch users on mount
   useEffect(() => {
-    const fetchUsers = async () => {
-      const res = await fetch('/api/data/users');
-      if (res.ok) setUsers(await res.json());
-    };
     fetchUsers();
   }, []);
 
   // Fetch latest scan status for users
 
+  // Poll scan status if in progress, and refresh users when scan completes
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
@@ -35,18 +39,17 @@ export default function UsersPage() {
       if (res.ok) {
         const status = await res.json();
         setScanStatus(status);
-        // If scan just completed, refresh users
         if (status.status === 'COMPLETED') {
-          const usersRes = await fetch('/api/data/users');
-          if (usersRes.ok) setUsers(await usersRes.json());
+          await fetchUsers();
         }
       }
     };
-    fetchScanStatus();
     if (scanStatus?.status === 'IN_PROGRESS') {
       interval = setInterval(fetchScanStatus, 2000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [scanStatus?.status]);
 
   const handleStartScan = async () => {
@@ -57,12 +60,8 @@ export default function UsersPage() {
       body: JSON.stringify({ dataType: 'users' })
     });
     if (res.ok) {
-      // Optionally refetch users after scan
-      const usersRes = await fetch('/api/data/users');
-      if (usersRes.ok) setUsers(await usersRes.json());
-      // Refetch scan status
-      const statusRes = await fetch('/api/scan?dataType=users');
-      if (statusRes.ok) setScanStatus(await statusRes.json());
+      // Start polling for scan status
+      setScanStatus({ status: 'IN_PROGRESS' });
     } else {
       setScanStatus({ status: 'FAILED', error: 'Scan failed' });
     }
