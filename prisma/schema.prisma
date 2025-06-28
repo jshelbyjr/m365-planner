@@ -139,3 +139,24 @@ model SharePointSiteUsageDetail {
   reportRefreshDate      DateTime?
   siteName               String?
 }
+
+model ExchangeMailbox {
+  id                        String   @id @unique // Mailbox GUID or unique identifier
+  displayName               String?
+  isDeleted                 Boolean?
+  deletedDate               DateTime?
+  createdDate               DateTime?
+  lastActivityDate          DateTime?
+  itemCount                 Int?
+  storageUsedBytes          BigInt?
+  issueWarningQuotaBytes    BigInt?
+  prohibitSendQuotaBytes    BigInt?
+  prohibitSendReceiveQuotaBytes BigInt?
+  deletedItemCount          Int?
+  deletedItemSizeBytes      BigInt?
+  deletedItemQuotaBytes     BigInt?
+  hasArchive                Boolean?
+  recipientType             String?
+  reportPeriod              String?
+  reportRefreshDate         DateTime?
+}

@@ -60,21 +60,18 @@ async function runScanInBackground(dataType: string) {
       create: { dataType, status: Status.TESTING, startedAt: new Date() },
     });
     await runScan(dataType);
-    await prisma.scanLog.update({
+    await prisma.scanLog.upsert({
       where: { dataType },
-      data: { status: Status.SUCCESS, completedAt: new Date() },
+      update: { status: Status.SUCCESS, completedAt: new Date() },
+      create: { dataType, status: Status.SUCCESS, completedAt: new Date() },
     });
   } catch (e: any) {
     console.error("Scan failed:", e);
     // Ensure scanLog exists before updating error
     await prisma.scanLog.upsert({
       where: { dataType },
-      update: {},
-      create: { dataType, status: Status.ERROR, startedAt: new Date() },
-    });
-    await prisma.scanLog.update({
-      where: { dataType },
-      data: { status: Status.ERROR, completedAt: new Date(), error: e.message },
+      update: { status: Status.ERROR, completedAt: new Date(), error: e.message },
+      create: { dataType, status: Status.ERROR, startedAt: new Date(), completedAt: new Date(), error: e.message },
     });
   }
 }

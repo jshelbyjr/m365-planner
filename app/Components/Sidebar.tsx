@@ -18,7 +18,7 @@ const navSections = [
   {
     header: 'EXO',
     items: [
-      { label: 'Mailboxes', href: '#', icon: null },
+      { label: 'Mailboxes', href: '/Dashboard/ExchangeMailboxes', icon: null },
       { label: 'Distribution Lists', href: '#', icon: null },
     ],
   },

@@ -11,6 +11,7 @@ import {
   getStandaloneSharePointStorage,
   getTotalAssignedLicenses
 } from './lib/metrics';
+import { TotalsCardDef } from './Components/TotalsCards';
 import { Box, Paper, Typography } from '@mui/material';
 import Image from 'next/image';
 import GroupIcon from '@mui/icons-material/Groups';
@@ -18,6 +19,7 @@ import LicenseIcon from '@mui/icons-material/WorkspacePremium';
 import PersonIcon from '@mui/icons-material/Person';
 import PublicIcon from '@mui/icons-material/Public';
 import CollaborationChartCard, { ChartDataItem } from './Components/CollaborationChartCard';
+import TotalsCards from './Components/TotalsCards';
 
 // Define types for our data
 
@@ -41,6 +43,7 @@ export default function DashboardPage() {
   const [sharePointUsage, setSharePointUsage] = useState<any[]>([]);
   const [oneDrives, setOneDrives] = useState<OneDrive[]>([]);
   const [licenses, setLicenses] = useState<any[]>([]);
+  const [exchangeMailboxes, setExchangeMailboxes] = useState<any[]>([]);
 
   // Fetch data from API endpoints on mount
   useEffect(() => {
@@ -92,7 +95,50 @@ export default function DashboardPage() {
       .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch licenses'))
       .then(data => setLicenses(Array.isArray(data) ? data : []))
       .catch(() => setLicenses([]));
+    // Exchange Mailboxes
+    fetch('/api/data/exchange-mailboxes')
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch exchange mailboxes'))
+      .then(data => setExchangeMailboxes(Array.isArray(data) ? data : []))
+      .catch(() => setExchangeMailboxes([]));
   }, []);
+  // Exchange Mailbox metrics
+  const totalMailboxes = exchangeMailboxes.length;
+  const totalMailboxStorageBytes = exchangeMailboxes.reduce((sum, mb) => {
+    const val = mb.storageUsedBytes;
+    if (val === undefined || val === null || val === '') return sum;
+    const num = typeof val === 'bigint' ? Number(val) : Number(val);
+    if (isNaN(num)) return sum;
+    return sum + num;
+  }, 0);
+  const totalMailboxStorageGB = totalMailboxStorageBytes / (1024 ** 3);
+
+  // Totals by Recipient Type
+  const recipientTypeCounts: Record<string, number> = {};
+  const recipientTypeStorage: Record<string, number> = {};
+  for (const mb of exchangeMailboxes) {
+    const type = mb.recipientType || 'Unknown';
+    recipientTypeCounts[type] = (recipientTypeCounts[type] || 0) + 1;
+    const val = mb.storageUsedBytes;
+    const num = val ? (typeof val === 'bigint' ? Number(val) : Number(val)) : 0;
+    if (!recipientTypeStorage[type]) recipientTypeStorage[type] = 0;
+    if (!isNaN(num)) recipientTypeStorage[type] += num;
+  }
+
+  // Prepare totals card data for Exchange
+  const exchangeTotals: TotalsCardDef = {
+    title: 'Exchange Mailboxes',
+    data: [
+      { label: 'Total Mailboxes', value: totalMailboxes },
+      ...Object.entries(recipientTypeCounts).map(([type, count]) => ({ label: `Total (${type})`, value: count })),
+      { label: 'Total Storage', value: totalMailboxStorageGB.toFixed(4), unit: 'GB' },
+    ],
+  };
+
+  // Prepare chart data for storage breakdown by Recipient Type
+  const mailboxStorageChart = Object.entries(recipientTypeStorage).map(([type, bytes], idx) => ({
+    name: type,
+    value: Number((bytes / (1024 ** 3)).toFixed(4)),
+  }));
 
 
 
@@ -291,6 +337,17 @@ export default function DashboardPage() {
             <Typography>Total Teams: {totalTeams}</Typography>
             <Typography>Total Storage: {teamStorage.toFixed(4)} GB</Typography>
           </Paper>
+        </Box>
+        {/* Exchange Mailboxes Totals Card */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
+          <TotalsCards cards={[exchangeTotals]} />
+        </Box>
+        {/* Exchange Mailbox Storage by Recipient Type Chart */}
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 45%' }, minWidth: 320 }}>
+          <CollaborationChartCard
+            title="Mailbox Storage by Recipient Type (GB)"
+            data={mailboxStorageChart}
+          />
         </Box>
         {/* Collaboration Distribution Chart */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 45%' }, minWidth: 320 }}>

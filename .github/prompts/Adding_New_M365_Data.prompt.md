@@ -1,5 +1,5 @@
 ---
-mode: ask
+mode: 'agent'
 ---
 Prisma Schema
 

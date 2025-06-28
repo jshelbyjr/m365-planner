@@ -1,3 +1,25 @@
+import { fetchExchangeMailboxUsage } from '@/lib/graph.service';
+
+/**
+ * Handler for Exchange Mailboxes scan
+ */
+export async function scanExchangeMailboxes() {
+  // Get authenticated Microsoft Graph client
+  const client = await (await import('@/app/lib/graph.service')).getAuthenticatedClient();
+  // Fetch mailbox usage data from Microsoft Graph
+  const mailboxes = await fetchExchangeMailboxUsage(client);
+  // Clear existing data
+  await prisma.exchangeMailbox.deleteMany({});
+  // Upsert each mailbox
+  for (const mb of mailboxes) {
+    if (!mb.id) continue;
+    await prisma.exchangeMailbox.upsert({
+      where: { id: mb.id },
+      update: mb,
+      create: { ...mb, id: mb.id },
+    });
+  }
+}
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
@@ -503,6 +525,7 @@ export const scanHandlers: { [key: string]: () => Promise<void> } = {
     await scanSharePointUsage();
     await denormalizeSharePointUsageUrls();
   },
+  exchangeMailboxes: scanExchangeMailboxes,
 };
 
 /**
