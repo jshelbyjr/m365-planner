@@ -43,7 +43,10 @@ M365 Planner is a dashboard for managing and visualizing Microsoft 365 tenant da
 
 ---
 
+
 ## API Endpoints & Permissions
+
+The scan logic is now modular: each scan type is implemented as a function in `app/lib/scan.service.ts` and registered in the `scanHandlers` map. To add a new scan type, add a function and register it in that file.
 
 | Endpoint                | Method | Purpose                                 | MS Graph API Endpoint(s)         | Minimum Permission |
 |-------------------------|--------|-----------------------------------------|----------------------------------|--------------------|

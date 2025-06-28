@@ -21,7 +21,10 @@ This document provides an overview of the main API endpoints, their purposes, an
 
 ---
 
+
 ## Scan Types & Permissions
+
+The scan logic is now fully modular. Each scan type is implemented as a separate function in `app/lib/scan.service.ts` and registered in the `scanHandlers` map. To add a new scan type, simply add a new function and entry in this file.
 
 | Scan Type   | MS Graph Endpoint(s) Used                | Minimum Permission      |
 |-------------|------------------------------------------|------------------------|
@@ -32,6 +35,8 @@ This document provides an overview of the main API endpoints, their purposes, an
 | sharepoint  | `/sites`, `/sites/{id}/drive`            | `Sites.Read.All`       |
 | onedrive    | `/users/{id}/drive`                      | `Files.Read.All`       |
 | domains     | `/domains`                               | `Directory.Read.All`   |
+
+See the code in `app/lib/scan.service.ts` for details and extension points.
 
 ---
 
