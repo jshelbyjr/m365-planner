@@ -18,40 +18,35 @@ export default function GroupsPage() {
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
 
   useEffect(() => {
-    const fetchGroups = async () => {
-      const res = await fetch('/api/data/groups');
-      if (res.ok) {
-        const { m365Groups } = await res.json();
-        setGroups(m365Groups);
-      }
-    };
-    fetchGroups();
-  }, []);
+    let interval: NodeJS.Timeout | undefined;
+    let isMounted = true;
 
-  // Fetch latest scan status for groups
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    const fetchScanStatus = async () => {
-      const res = await fetch('/api/scan?dataType=groups');
-      if (res.ok) {
-        const status = await res.json();
+    const fetchStatusAndGroups = async () => {
+      const scanRes = await fetch('/api/scan?dataType=groups');
+      let status = null;
+      if (scanRes.ok) {
+        status = await scanRes.json();
+        if (!isMounted) return;
         setScanStatus(status);
-        // If scan just completed, refresh groups
-        if (status.status === 'COMPLETED') {
-          const groupsRes = await fetch('/api/data/groups');
-          if (groupsRes.ok) {
-            const { m365Groups } = await groupsRes.json();
-            setGroups(m365Groups);
-          }
+      }
+      // Always fetch groups after scan completes or is idle, or on mount
+      if (!status || status.status === 'COMPLETED' || status.status === 'IDLE') {
+        const groupsRes = await fetch('/api/data/groups');
+        if (groupsRes.ok) {
+          const { m365Groups } = await groupsRes.json();
+          setGroups(m365Groups);
         }
       }
     };
-    fetchScanStatus();
+
+    fetchStatusAndGroups();
     if (scanStatus?.status === 'IN_PROGRESS') {
-      interval = setInterval(fetchScanStatus, 2000);
+      interval = setInterval(fetchStatusAndGroups, 2000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      if (interval) clearInterval(interval);
+    };
   }, [scanStatus?.status]);
 
   const handleStartScan = async () => {
@@ -61,19 +56,10 @@ export default function GroupsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dataType: 'groups' })
     });
-    if (res.ok) {
-      // Optionally refetch groups after scan
-      const groupsRes = await fetch('/api/data/groups');
-      if (groupsRes.ok) {
-        const { m365Groups } = await groupsRes.json();
-        setGroups(m365Groups);
-      }
-      // Refetch scan status
-      const statusRes = await fetch('/api/scan?dataType=groups');
-      if (statusRes.ok) setScanStatus(await statusRes.json());
-    } else {
+    if (!res.ok) {
       setScanStatus({ status: 'FAILED', error: 'Scan failed' });
     }
+    // The polling effect will handle updating groups and scanStatus after scan completes
   };
 
   const columns = [
