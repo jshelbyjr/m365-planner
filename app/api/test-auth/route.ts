@@ -1,6 +1,7 @@
 // file: app/api/test-auth/route.ts
 import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
+import { Status } from '../../lib/constants';
 
 const prisma = new PrismaClient();
 
@@ -37,9 +38,9 @@ export async function GET() {
     // You can optionally try a simple Graph API call here, but for now, just getting the token is a great test.
     // For example, fetching the tenant organization details.
     
-    return NextResponse.json({ message: `Successfully obtained access token! Expires in: ${tokenData.expires_in} seconds.` });
+    return NextResponse.json({ status: Status.SUCCESS });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'An unknown error occurred.' }, { status: 500 });
+    return NextResponse.json({ status: Status.ERROR, error: error.message }, { status: 500 });
   }
 }

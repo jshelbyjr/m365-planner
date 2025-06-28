@@ -1,6 +1,7 @@
 // file: app/api/config/route.ts
 import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
+import { Status } from '../../lib/constants';
 
 const prisma = new PrismaClient();
 
@@ -13,7 +14,7 @@ export async function GET() {
     if (config) {
       // Return the config but omit the client secret for security
       const { clientSecret, ...safeConfig } = config;
-      return NextResponse.json(safeConfig);
+      return NextResponse.json({ status: Status.SUCCESS, config: safeConfig });
     }
     return NextResponse.json(null);
   } catch (error) {
@@ -41,6 +42,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ message: 'Configuration saved successfully.' });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to save configuration.' }, { status: 500 });
+    return NextResponse.json({ status: Status.ERROR, error: (error as Error).message }, { status: 500 });
   }
 }

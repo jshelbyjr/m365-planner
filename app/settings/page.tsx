@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
+import { API_ENDPOINTS, Status } from '../lib/constants';
 
 export default function HomePage() {
   const [tenantId, setTenantId] = useState('');
@@ -9,13 +10,13 @@ export default function HomePage() {
   const [clientSecret, setClientSecret] = useState('');
   
   const [message, setMessage] = useState('');
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testStatus, setTestStatus] = useState<Status>(Status.IDLE);
   const [testMessage, setTestMessage] = useState('');
 
   // Fetch existing configuration on page load
   useEffect(() => {
     const fetchConfig = async () => {
-      const response = await fetch('/api/config');
+      const response = await fetch(API_ENDPOINTS.CONFIG);
       if (response.ok) {
         const data = await response.json();
         if (data) {
@@ -31,7 +32,7 @@ export default function HomePage() {
     e.preventDefault();
     setMessage('');
 
-    const response = await fetch('/api/config', {
+    const response = await fetch(API_ENDPOINTS.CONFIG, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenantId, clientId, clientSecret }),
@@ -47,16 +48,16 @@ export default function HomePage() {
   };
   
   const handleTestAuth = async () => {
-    setTestStatus('testing');
+    setTestStatus(Status.TESTING);
     setTestMessage('');
-    const response = await fetch('/api/test-auth');
+    const response = await fetch(API_ENDPOINTS.TEST_AUTH);
     const result = await response.json();
     
     if (response.ok) {
-        setTestStatus('success');
+        setTestStatus(Status.SUCCESS);
         setTestMessage(result.message);
     } else {
-        setTestStatus('error');
+        setTestStatus(Status.ERROR);
         setTestMessage(`Error: ${result.error}`);
     }
   };
@@ -115,13 +116,13 @@ export default function HomePage() {
             <h2 className="text-lg font-semibold">Test Connection</h2>
             <button
               onClick={handleTestAuth}
-              disabled={testStatus === 'testing'}
+              disabled={testStatus === Status.TESTING}
               className="mt-2 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 disabled:bg-gray-400"
             >
-              {testStatus === 'testing' ? 'Testing...' : 'Run Auth Test'}
+              {testStatus === Status.TESTING ? 'Testing...' : 'Run Auth Test'}
             </button>
              {testMessage && (
-                <div className={`mt-4 p-3 rounded-md text-sm ${testStatus === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <div className={`mt-4 p-3 rounded-md text-sm ${testStatus === Status.SUCCESS ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {testMessage}
                 </div>
              )}
