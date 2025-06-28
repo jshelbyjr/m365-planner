@@ -124,9 +124,9 @@ export default function DashboardPage() {
     if (!isNaN(num)) recipientTypeStorage[type] += num;
   }
 
-  // Prepare totals card data for Exchange
+  // Prepare totals card data for Mailbox
   const exchangeTotals: TotalsCardDef = {
-    title: 'Exchange Mailboxes',
+    title: 'Mailbox',
     data: [
       { label: 'Total Mailboxes', value: totalMailboxes },
       ...Object.entries(recipientTypeCounts).map(([type, count]) => ({ label: `Total (${type})`, value: count })),
@@ -338,11 +338,30 @@ export default function DashboardPage() {
             <Typography>Total Storage: {teamStorage.toFixed(4)} GB</Typography>
           </Paper>
         </Box>
-        {/* Exchange Mailboxes Totals Card */}
+      </Box>
+
+      {/* Exchange Section */}
+      <Box display="flex" alignItems="center" gap={1} sx={{ mt: 5, mb: 3 }}>
+        <Image src="/icons8-microsoft-exchange-2019-50.png" alt="Exchange" width={28} height={28} />
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>Exchange</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+        {/* Mailbox Totals Card */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
-          <TotalsCards cards={[exchangeTotals]} />
+          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <Image src="/icons8-microsoft-exchange-2019-50.png" alt="Exchange" width={24} height={24} />
+              <Typography variant="h6" gutterBottom>Mailbox</Typography>
+            </Box>
+            {/* TotalsCards expects a cards prop, so we render the card data manually here for custom icon */}
+            {exchangeTotals.data.map((item, idx) => (
+              <Typography key={idx}>
+                {item.label}: {item.value}{item.unit ? ` ${item.unit}` : ''}
+              </Typography>
+            ))}
+          </Paper>
         </Box>
-        {/* Exchange Mailbox Storage by Recipient Type Chart */}
+        {/* Mailbox Storage by Recipient Type Chart */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 45%' }, minWidth: 320 }}>
           <CollaborationChartCard
             title="Mailbox Storage by Recipient Type (GB)"
