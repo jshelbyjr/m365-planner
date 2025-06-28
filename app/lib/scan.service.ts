@@ -1,3 +1,46 @@
+/**
+ * Handler for SharePoint Site Usage scan
+ */
+export async function scanSharePointUsage() {
+  const client = await getAuthenticatedClient();
+  await prisma.sharePointSiteUsageDetail.deleteMany({});
+  // Microsoft Graph API: /reports/getSharePointSiteUsageDetail(period='D180')
+  const response = await client.api("/reports/getSharePointSiteUsageDetail(period='D180')").get();
+  // The response is a CSV string, so we need to parse it
+  const csv = response;
+  const lines = csv.split('\n').filter(Boolean);
+  if (lines.length < 2) return;
+  const headers: string[] = lines[0].split(',').map((h: string) => h.trim().replace(/\"/g, ''));
+  const records = lines.slice(1).map((line: string) => {
+    // Handle quoted CSV values
+    const values = line.match(/("[^"]*"|[^,]+)/g)?.map((v) => v.replace(/^"|"$/g, '')) || [];
+    const obj: Record<string, any> = {};
+    headers.forEach((h: string, i: number) => {
+      obj[h] = values[i] ?? null;
+    });
+    return obj;
+  });
+  // Map and insert records
+  for (const rec of records) {
+    await prisma.sharePointSiteUsageDetail.create({
+      data: {
+        id: rec['SiteId'] || rec['Site Id'],
+        siteId: rec['SiteId'] || rec['Site Id'],
+        siteUrl: rec['SiteUrl'] || rec['Site Url'],
+        siteName: rec['SiteName'] || rec['Site Name'],
+        ownerDisplayName: rec['OwnerDisplayName'] || rec['Owner Display Name'],
+        lastActivityDate: rec['LastActivityDate'] ? new Date(rec['LastActivityDate']) : null,
+        fileCount: rec['FileCount'] ? parseInt(rec['FileCount'], 10) : null,
+        activeFileCount: rec['ActiveFileCount'] ? parseInt(rec['ActiveFileCount'], 10) : null,
+        pageViewCount: rec['PageViewCount'] ? parseInt(rec['PageViewCount'], 10) : null,
+        storageUsedMB: rec['StorageUsedMB'] ? parseFloat(rec['StorageUsedMB']) : null,
+        storageAllocatedMB: rec['StorageAllocatedMB'] ? parseFloat(rec['StorageAllocatedMB']) : null,
+        reportPeriod: rec['ReportPeriod'] || rec['Report Period'],
+        reportRefreshDate: rec['ReportRefreshDate'] ? new Date(rec['ReportRefreshDate']) : null,
+      },
+    });
+  }
+}
 // file: lib/scan.service.ts
 // Modular scan logic for each asset type in M365 Planner
 import { prisma } from '@/app/lib/prisma';
@@ -332,6 +375,7 @@ export const scanHandlers: { [key: string]: () => Promise<void> } = {
   onedrive: scanOneDrive,
   licenses: scanLicenses,
   domains: scanDomains,
+  sharepointUsage: scanSharePointUsage,
 };
 
 /**

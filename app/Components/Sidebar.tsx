@@ -27,6 +27,7 @@ const navSections = [
     items: [
       { label: 'OneDrive', href: '/Dashboard/OneDrive', icon: <Image src="/icons8-microsoft-onedrive-2019-50.png" alt="OneDrive" width={20} height={20} className="mr-2 inline" /> },
       { label: 'SharePoint Sites', href: '/Dashboard/SharePoint', icon: <Image src="/icons8-microsoft-sharepoint-2019-50.png" alt="SharePoint" width={20} height={20} className="mr-2 inline" /> },
+      { label: 'SharePoint Site Usage', href: '/Dashboard/SharePointUsage', icon: <Image src="/icons8-microsoft-sharepoint-2019-50.png" alt="SharePoint Usage" width={20} height={20} className="mr-2 inline" /> },
       { label: 'M365 Groups', href: '/Dashboard/Groups', icon: <GroupIcon fontSize="small" className="mr-2" /> },
       { label: 'Microsoft Teams', href: '/Dashboard/Teams', icon: <Image src="/icons8-microsoft-teams-2019-50.png" alt="Teams" width={20} height={20} className="mr-2 inline" /> },
     ],

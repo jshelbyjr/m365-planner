@@ -119,3 +119,19 @@ model License {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+model SharePointSiteUsageDetail {
+  id                String   @id @unique
+  siteId            String?
+  siteUrl           String?
+  siteName          String?
+  ownerDisplayName  String?
+  lastActivityDate  DateTime?
+  fileCount         Int?
+  activeFileCount   Int?
+  pageViewCount     Int?
+  storageUsedMB     Float?
+  storageAllocatedMB Float?
+  reportPeriod      String?
+  reportRefreshDate DateTime?
+}

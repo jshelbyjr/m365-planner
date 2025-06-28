@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
     SHAREPOINT: '/api/data/sharepoint',
     ONEDRIVE: '/api/data/onedrive',
     DOMAINS: '/api/data/domains',
+    SHAREPOINT_USAGE: '/api/data/sharepoint-usage',
   },
 };
 
@@ -29,6 +30,7 @@ export enum Status {
   ERROR = 'error',
   VERIFIED = 'verified',
   UNVERIFIED = 'unverified',
+  SHAREPOINT_USAGE = 'sharepoint-usage',
 }
 
 /**

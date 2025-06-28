@@ -23,6 +23,7 @@ All API endpoint paths and status strings are defined in `app/lib/constants.ts` 
 | `/api/data/teams`       | GET    | List all teams                          | `/groups` (filtered)             | `Group.Read.All`   |
 | `/api/data/licenses`    | GET    | List all licenses                       | `/subscribedSkus`                | `Directory.Read.All`|
 | `/api/data/sharepoint`  | GET    | List all SharePoint sites               | `/sites`                         | `Sites.Read.All`   |
+| `/api/data/sharepoint-usage` | GET | List SharePoint site usage details      | `/reports/getSharePointSiteUsageDetail(period='D180')` | `Reports.Read.All` |
 | `/api/data/onedrive`    | GET    | List all OneDrive drives                | `/users/{id}/drive`              | `Files.Read.All`   |
 | `/api/data/domains`     | GET    | List all domains                        | `/domains`                       | `Directory.Read.All`|
 
@@ -40,6 +41,7 @@ The scan logic is now fully modular. Each scan type is implemented as a separate
 | teams       | `/groups` (filtered for Teams)           | `Group.Read.All`       |
 | licenses    | `/subscribedSkus`                        | `Directory.Read.All`   |
 | sharepoint  | `/sites`, `/sites/{id}/drive`            | `Sites.Read.All`       |
+| sharepointUsage | `/reports/getSharePointSiteUsageDetail(period='D180')` | `Reports.Read.All` |
 | onedrive    | `/users/{id}/drive`                      | `Files.Read.All`       |
 | domains     | `/domains`                               | `Directory.Read.All`   |
 
