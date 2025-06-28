@@ -47,6 +47,7 @@ This guide outlines all the steps and files you need to update when adding a new
 
 ---
 
+
 ## Checklist
 - [ ] Update Prisma schema
 - [ ] Run migration and generate client
@@ -55,6 +56,7 @@ This guide outlines all the steps and files you need to update when adding a new
 - [ ] Add dashboard page
 - [ ] Update/add frontend components (if needed)
 - [ ] Add/update tests (if needed)
+- [ ] Document new endpoints and permissions in `README.md` and `docs/api-overview.md`
 
 ---
 

@@ -1,24 +1,39 @@
+
 # API Overview
 
-This document provides an overview of the main API endpoints in the project, their purposes, and example usage.
+This document provides an overview of the main API endpoints, their purposes, and the minimum Microsoft Graph permissions required.
 
 ---
 
-## Scan API
-- **Endpoint:** `/api/scan`
-- **Methods:**
-  - `GET`: Get the current scan status
-  - `POST`: Start a new scan (body: `{ dataType: 'users' | 'groups' | ... }`)
-- **Purpose:**
-  - Manages background scans for different data types (users, groups, etc.)
+## API Endpoints
 
-## Data APIs
-- **Endpoint:** `/api/data/<type>`
-- **Methods:**
-  - `GET`: Fetch all records of the given type
-  - `POST`: Add a new record (if supported)
-- **Purpose:**
-  - CRUD operations for each data type (e.g., users, groups, teams)
+| Endpoint                | Method | Purpose                                 | MS Graph API Endpoint(s)         | Minimum Permission |
+|-------------------------|--------|-----------------------------------------|----------------------------------|--------------------|
+| `/api/scan`             | GET    | Get current scan status                 | n/a                              | n/a                |
+| `/api/scan`             | POST   | Start a new scan (by dataType)          | See scan types below             | See below          |
+| `/api/data/users`       | GET    | List all users                          | `/users`                         | `User.Read.All`    |
+| `/api/data/groups`      | GET    | List all groups                         | `/groups`                        | `Group.Read.All`   |
+| `/api/data/teams`       | GET    | List all teams                          | `/groups` (filtered)             | `Group.Read.All`   |
+| `/api/data/licenses`    | GET    | List all licenses                       | `/subscribedSkus`                | `Directory.Read.All`|
+| `/api/data/sharepoint`  | GET    | List all SharePoint sites               | `/sites`                         | `Sites.Read.All`   |
+| `/api/data/onedrive`    | GET    | List all OneDrive drives                | `/users/{id}/drive`              | `Files.Read.All`   |
+| `/api/data/domains`     | GET    | List all domains                        | `/domains`                       | `Directory.Read.All`|
+
+---
+
+## Scan Types & Permissions
+
+| Scan Type   | MS Graph Endpoint(s) Used                | Minimum Permission      |
+|-------------|------------------------------------------|------------------------|
+| users       | `/users`                                 | `User.Read.All`        |
+| groups      | `/groups`                                | `Group.Read.All`       |
+| teams       | `/groups` (filtered for Teams)           | `Group.Read.All`       |
+| licenses    | `/subscribedSkus`                        | `Directory.Read.All`   |
+| sharepoint  | `/sites`, `/sites/{id}/drive`            | `Sites.Read.All`       |
+| onedrive    | `/users/{id}/drive`                      | `Files.Read.All`       |
+| domains     | `/domains`                               | `Directory.Read.All`   |
+
+---
 
 ## Example: Start a Scan
 ```http
@@ -37,4 +52,4 @@ GET /api/data/users
 
 ---
 
-Add more endpoints and details as the API grows.
+> **Note:** All permissions listed are the lowest Microsoft Graph Application permissions required for read-only access. See [Microsoft Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference) for more details.

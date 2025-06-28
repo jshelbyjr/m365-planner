@@ -1,3 +1,4 @@
+
 # Project Structure
 
 This document describes the main folders and files in the project, and their purposes.
@@ -7,7 +8,7 @@ This document describes the main folders and files in the project, and their pur
 ## Top-Level Folders
 
 - **app/**
-  - Main application code (API routes, pages, components, etc.)
+  - Main application code (API routes, pages, components, dashboard, settings, etc.)
 - **prisma/**
   - Prisma schema, migrations, and database files.
 - **public/**
@@ -33,10 +34,10 @@ This document describes the main folders and files in the project, and their pur
 - **docker-compose.yml, dockerfile**
   - Docker configuration for development/deployment
 - **README.md**
-  - Project overview and quickstart
+  - Project overview, setup, and API reference
 - **tsconfig.json, next.config.ts**
   - TypeScript and Next.js configuration
 
 ---
 
-Keep this document updated as the project evolves.
+Keep this document updated as the project evolves. See `README.md` and other docs for more details.

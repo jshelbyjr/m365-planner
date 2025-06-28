@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+# M365 Planner Dashboard
+
+M365 Planner is a dashboard for managing and visualizing Microsoft 365 tenant data, including users, groups, teams, licenses, SharePoint, OneDrive, and domains. It is built with Next.js (App Router), TypeScript, Prisma ORM, and Material UI (MUI).
+
+---
+
+## Features
+- Visualize and manage Microsoft 365 data (users, groups, teams, licenses, SharePoint, OneDrive, domains)
+- Dashboard UI with MUI and custom components
+- Background scan jobs to sync data from Microsoft Graph
+- RESTful API endpoints for each data type
+- Secure, type-safe backend using Prisma ORM
+
+---
+
+## Architecture
+- **Frontend:** Next.js (App Router), React, TypeScript, MUI
+- **Backend:** Next.js API routes, Prisma ORM, Microsoft Graph API
+- **Database:** SQLite (default, can be swapped)
+- **Docs:** See `docs/` for API and process details
+
+---
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Set up environment variables:**
+   - Copy `.env.example` to `.env` and fill in Microsoft Graph credentials and DB config.
+3. **Run database migrations:**
+   ```bash
+   npx prisma migrate dev --name init
+   npx prisma generate
+   ```
+4. **Start the dev server:**
+   ```bash
+   npm run dev
+   ```
+5. **Open** [http://localhost:3000](http://localhost:3000)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## API Endpoints & Permissions
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Endpoint                | Method | Purpose                                 | MS Graph API Endpoint(s)         | Minimum Permission |
+|-------------------------|--------|-----------------------------------------|----------------------------------|--------------------|
+| `/api/scan`             | GET    | Get current scan status                 | n/a                              | n/a                |
+| `/api/scan`             | POST   | Start a new scan (by dataType)          | See below                        | See below          |
+| `/api/data/users`       | GET    | List all users                          | `/users`                         | `User.Read.All`    |
+| `/api/data/groups`      | GET    | List all groups                         | `/groups`                        | `Group.Read.All`   |
+| `/api/data/teams`       | GET    | List all teams                          | `/groups` (filtered)             | `Group.Read.All`   |
+| `/api/data/licenses`    | GET    | List all licenses                       | `/subscribedSkus`                | `Directory.Read.All`|
+| `/api/data/sharepoint`  | GET    | List all SharePoint sites               | `/sites`                         | `Sites.Read.All`   |
+| `/api/data/onedrive`    | GET    | List all OneDrive drives                | `/users/{id}/drive`              | `Files.Read.All`   |
+| `/api/data/domains`     | GET    | List all domains                        | `/domains`                       | `Directory.Read.All`|
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Scan Types & Permissions:**
 
-## Learn More
+| Scan Type   | MS Graph Endpoint(s) Used                | Minimum Permission      |
+|-------------|------------------------------------------|------------------------|
+| users       | `/users`                                 | `User.Read.All`        |
+| groups      | `/groups`                                | `Group.Read.All`       |
+| teams       | `/groups` (filtered for Teams)           | `Group.Read.All`       |
+| licenses    | `/subscribedSkus`                        | `Directory.Read.All`   |
+| sharepoint  | `/sites`, `/sites/{id}/drive`            | `Sites.Read.All`       |
+| onedrive    | `/users/{id}/drive`                      | `Files.Read.All`       |
+| domains     | `/domains`                               | `Directory.Read.All`   |
 
-To learn more about Next.js, take a look at the following resources:
+> **Note:** All permissions listed are the lowest Microsoft Graph Application permissions required for read-only access. See [Microsoft Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference) for more details.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+See [`docs/project-structure.md`](docs/project-structure.md) for a detailed breakdown.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contributing
+
+See [`docs/`](docs/) for process, API, and data model documentation. Please update docs when adding features or endpoints.
+
+---
+
+## License
+
+MIT
