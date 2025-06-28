@@ -341,10 +341,7 @@ export default function DashboardPage() {
       </Box>
 
       {/* Exchange Section */}
-      <Box display="flex" alignItems="center" gap={1} sx={{ mt: 5, mb: 3 }}>
-        <Image src="/icons8-microsoft-exchange-2019-50.png" alt="Exchange" width={28} height={28} />
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>Exchange</Typography>
-      </Box>
+      <Typography variant="h5" sx={{ mt: 5, mb: 3, fontWeight: 600 }}>Exchange</Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {/* Mailbox Totals Card */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
