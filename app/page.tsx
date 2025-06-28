@@ -1,22 +1,24 @@
 
-
 'use client';
 
+import { useState, useEffect } from 'react';
+import DataCollectionCard, { ScanStatus } from './Components/DataCollectionCard';
+import TotalsCards, { TotalsCardDef } from './Components/TotalsCards';
+
 // Define types for our data
+type Domain = { id: string; status?: string };
 type User = { id: string; displayName: string; userPrincipalName: string; accountEnabled: boolean };
 type Group = { id: string; displayName: string };
 type Team = { id: string; displayName: string; description?: string; visibility?: string };
 type SharePointSite = { id: string; name?: string; storageUsed?: number };
 type OneDrive = { id: string; ownerId?: string; ownerName?: string; siteName?: string; siteUrl?: string; size?: number };
 
-import { useState, useEffect } from 'react';
-import DataCollectionCard, { ScanStatus } from './Components/DataCollectionCard';
-import TotalsCards, { TotalsCardDef } from './Components/TotalsCards';
 
 
 
 export default function DashboardPage() {
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
+  const [domains, setDomains] = useState<Domain[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [m365Groups, setM365Groups] = useState<Group[]>([]);
   const [securityGroups, setSecurityGroups] = useState<Group[]>([]);
@@ -27,6 +29,12 @@ export default function DashboardPage() {
 
   // Fetch data from API endpoints on mount
   useEffect(() => {
+    // Domains
+    fetch('/api/data/domains')
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch domains'))
+      .then(data => setDomains(Array.isArray(data) ? data : []))
+      .catch(() => setDomains([]));
+
     // Users
     fetch('/api/data/users')
       .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch users'))
@@ -68,8 +76,11 @@ export default function DashboardPage() {
 
 
   // Calculate card data
-  const totalUsers = users.length;
+  const totalDomains = domains.length;
+  const verifiedDomains = domains.filter((d: Domain) => d.status?.toLowerCase() === 'verified').length;
+  const unverifiedDomains = domains.filter((d: Domain) => d.status?.toLowerCase() !== 'verified').length;
 
+  const totalUsers = users.length;
   const activeUsers = users.filter((u: User) => u.accountEnabled).length;
   const disabledUsers = users.filter((u: User) => u.accountEnabled === false).length;
 
@@ -87,6 +98,14 @@ export default function DashboardPage() {
   const totalAssignedLicenses = licenses.reduce((sum: number, l: any) => sum + (typeof l.assignedUnits === 'number' ? l.assignedUnits : 0), 0);
 
   const cards: TotalsCardDef[] = [
+    {
+      title: 'Domains',
+      data: [
+        { label: 'Total Domains', value: totalDomains },
+        { label: 'Verified', value: verifiedDomains },
+        { label: 'Unverified', value: unverifiedDomains },
+      ],
+    },
     {
       title: 'Users',
       data: [

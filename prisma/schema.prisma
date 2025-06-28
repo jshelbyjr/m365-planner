@@ -1,16 +1,3 @@
-// Model for Microsoft Teams
-model Team {
-  id          String  @id @unique // Graph ID
-  displayName String?
-  description String?
-  visibility  String?
-  owners      User[]   @relation("TeamOwners")
-  members     User[]   @relation("TeamMembers")
-}
-
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x"]
@@ -21,67 +8,74 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Model for storing the M365 App Registration configuration
+model Domain {
+  id     String  @id @unique
+  status String?
+}
+
+model Team {
+  id          String  @id @unique
+  displayName String?
+  description String?
+  visibility  String?
+  members     User[]  @relation("TeamMembers")
+  owners      User[]  @relation("TeamOwners")
+}
+
 model Configuration {
-  id           Int      @id @default(1) // Only ever one row
+  id           Int      @id @default(autoincrement())
   tenantId     String
   clientId     String
   clientSecret String
-  // Add createdAt/updatedAt for tracking when it was last updated
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
-// Model to track the status and times of data collection scans per data type
 model ScanLog {
   id          Int       @id @default(autoincrement())
-  dataType    String // e.g., "users", "groups"
-  status      String // e.g., "IDLE", "IN_PROGRESS", "COMPLETED", "FAILED"
+  dataType    String
+  status      String
   startedAt   DateTime?
   completedAt DateTime?
   error       String?
 }
 
-// Model for M365 Users
 model User {
-  id                String   @id @unique // Graph ID
+  id                String      @id @unique
   displayName       String?
   userPrincipalName String?
   accountEnabled    Boolean?
   department        String?
   jobTitle          String?
-  ownerOfGroups     M365Group[] @relation("GroupOwners")
   memberOfGroups    M365Group[] @relation("GroupMembers")
-  ownerOfTeams      Team[]      @relation("TeamOwners")
+  ownerOfGroups     M365Group[] @relation("GroupOwners")
   memberOfTeams     Team[]      @relation("TeamMembers")
+  ownerOfTeams      Team[]      @relation("TeamOwners")
 }
 
-// Model for M365 Groups (formerly Office 365 Groups)
 model M365Group {
-  id           String   @id @unique // Graph ID
+  id           String  @id @unique
   displayName  String?
   mailNickname String?
   memberCount  Int?
-  visibility   String? // Public or Private
-  owners       User[]   @relation("GroupOwners")
-  members      User[]   @relation("GroupMembers")
+  visibility   String?
+  members      User[]  @relation("GroupMembers")
+  owners       User[]  @relation("GroupOwners")
 }
 
-// Model for Security and Distribution Groups
 model SecurityGroup {
-  id                  String  @id @unique // Graph ID
+  id                  String  @id @unique
   displayName         String?
-  isDistributionGroup Boolean // true for Distribution, false for Security
+  isDistributionGroup Boolean
   memberCount         Int?
 }
 
-// Model for SharePoint Sites
 model SharePointSite {
-  id                String   @id @unique // Site ID
+  id                String    @id @unique
   name              String?
   url               String?
-  teams             String? // Comma-separated Team IDs or names
-  channelSite       Boolean? // Is this a Teams channel site?
+  teams             String?
+  channelSite       Boolean?
   storageUsed       Float?
   hub               String?
   template          String?
@@ -89,7 +83,7 @@ model SharePointSite {
   dateCreated       DateTime?
   storageLimit      Float?
   storageUsedPct    Float?
-  m365Group         String? // M365 Group ID or name
+  m365Group         String?
   filesViewedEdited Int?
   pageViews         Int?
   pageVisits        Int?
@@ -98,26 +92,22 @@ model SharePointSite {
   externalSharing   String?
 }
 
-// Model for OneDrive
 model OneDrive {
-  id         String   @id @unique // Drive ID
-  ownerId    String? // User/Owner Graph ID
-  ownerName  String?
-  siteName   String?
-  siteUrl    String?
-  size       Float?
-  // Optionally, add createdAt/updatedAt for tracking
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @unique
+  ownerId   String?
+  ownerName String?
+  siteName  String?
+  siteUrl   String?
+  size      Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-
-// Model for Microsoft 365 Licenses (Subscribed SKUs)
 model License {
-  id             String   @id @unique // SKU ID from Graph
-  skuPartNumber  String   // e.g., "ENTERPRISEPACK"
+  id             String   @id @unique
+  skuPartNumber  String
   displayName    String?
-  status         String?  // e.g., "Enabled"
+  status         String?
   totalSeats     Int?
   consumedSeats  Int?
   availableSeats Int?
@@ -125,7 +115,6 @@ model License {
   warningUnits   Int?
   suspendedUnits Int?
   assignedUnits  Int?
-  // Optionally, add createdAt/updatedAt for tracking
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

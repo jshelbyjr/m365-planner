@@ -1,3 +1,26 @@
+/**
+ * Fetches Microsoft 365 domains from Microsoft Graph API.
+ * @param accessToken OAuth access token for Graph API
+ * @returns Array of domain info objects
+ */
+export async function getDomainsFromGraph(accessToken?: string): Promise<any[]> {
+  // If accessToken is not provided, you should implement your own logic to retrieve it
+  // For now, throw if not provided
+  if (!accessToken) {
+    throw new Error('Access token is required to fetch domains from Microsoft Graph');
+  }
+  const response = await fetch('https://graph.microsoft.com/v1.0/domains', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch domains from Microsoft Graph');
+  }
+  const data = await response.json();
+  return data.value || [];
+}
 import { License } from '@prisma/client';
 
 /**

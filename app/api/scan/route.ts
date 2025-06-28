@@ -64,8 +64,33 @@ function getScanHandlers() {
     sharepoint: handleSharePointScan,
     onedrive: handleOneDriveScan,
     licenses: handleLicensesScan,
+    domains: handleDomainsScan,
     // Add more types here as needed
   };
+}
+
+// Handler for Domains scan
+async function handleDomainsScan() {
+  const client = await getAuthenticatedClient();
+  // Clear old domains
+  await prisma.domain.deleteMany({});
+  // Fetch domains from Microsoft Graph
+  let url = '/domains?$top=999';
+  let domains: any[] = [];
+  while (url) {
+    const response = await client.api(url).get();
+    if (response.value) domains = domains.concat(response.value);
+    url = response['@odata.nextLink'] ? response['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0', '') : null;
+  }
+  // Insert domains into DB
+  for (const d of domains) {
+    await prisma.domain.create({
+      data: {
+        id: d.id,
+        status: d.isVerified ? 'Verified' : 'Unverified',
+      },
+    });
+  }
 }
 
 // Handler for Licenses scan
