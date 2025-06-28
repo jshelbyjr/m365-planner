@@ -5,13 +5,18 @@ import { NextResponse } from 'next/server';
 import { runScan, scanHandlers } from '@/app/lib/scan.service';
 
 
-// GET handler to check the current scan status
-export async function GET() {
-  const scan = await prisma.scanLog.findUnique({ where: { id: 1 } }) ?? await prisma.scanLog.create({data: {id: 1, status: 'IDLE', dataType: 'groups'}});
+// GET handler to check the current scan status for a data type
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const dataType = searchParams.get('dataType') || 'groups';
+  let scan = await prisma.scanLog.findUnique({ where: { dataType } });
+  if (!scan) {
+    scan = await prisma.scanLog.create({ data: { dataType, status: 'IDLE' } });
+  }
   return NextResponse.json(scan);
 }
 
-// POST handler to start a new scan
+// POST handler to start a new scan for a data type
 export async function POST(request: Request) {
   const supportedTypes = Object.keys(scanHandlers);
   let dataType = 'groups';
@@ -26,14 +31,14 @@ export async function POST(request: Request) {
   if (!supportedTypes.includes(dataType)) {
     return NextResponse.json({ message: `Unsupported scan type: ${dataType}` }, { status: 400 });
   }
-  const currentScan = await prisma.scanLog.findUnique({ where: { id: 1 } });
+  const currentScan = await prisma.scanLog.findUnique({ where: { dataType } });
   if (currentScan?.status === 'IN_PROGRESS') {
     return NextResponse.json({ message: 'A scan is already in progress.' }, { status: 409 });
   }
   await prisma.scanLog.upsert({
-    where: { id: 1 },
-    update: { status: 'IN_PROGRESS', startedAt: new Date(), completedAt: null, error: null, dataType },
-    create: { id: 1, status: 'IN_PROGRESS', startedAt: new Date(), dataType },
+    where: { dataType },
+    update: { status: 'IN_PROGRESS', startedAt: new Date(), completedAt: null, error: null },
+    create: { dataType, status: 'IN_PROGRESS', startedAt: new Date() },
   });
   // Fire off the background scan process but don't wait for it to finish
   runScanInBackground(dataType);
@@ -49,13 +54,13 @@ async function runScanInBackground(dataType: string) {
     console.log("Starting scan for", dataType);
     await runScan(dataType);
     await prisma.scanLog.update({
-      where: { id: 1 },
+      where: { dataType },
       data: { status: 'COMPLETED', completedAt: new Date() },
     });
   } catch (e: any) {
     console.error("Scan failed:", e);
     await prisma.scanLog.update({
-      where: { id: 1 },
+      where: { dataType },
       data: { status: 'FAILED', completedAt: new Date(), error: e.message },
     });
   }

@@ -26,6 +26,7 @@
   "devDependencies": {
     "@microsoft/microsoft-graph-types": "^2.40.0",
     "@tailwindcss/postcss": "^4",
+    "@types/microsoft-graph": "^2.40.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

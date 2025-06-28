@@ -49,7 +49,7 @@ const LicenseDashboardPage = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
-      const res = await fetch('/api/scan');
+      const res = await fetch('/api/scan?dataType=licenses');
       if (res.ok) {
         const status = await res.json();
         setScanStatus(status);
@@ -74,7 +74,7 @@ const LicenseDashboardPage = () => {
     });
     if (res.ok) {
       fetchLicenses();
-      const statusRes = await fetch('/api/scan');
+      const statusRes = await fetch('/api/scan?dataType=licenses');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
       setScanStatus({ status: 'FAILED', error: 'Scan failed' });

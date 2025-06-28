@@ -33,11 +33,12 @@ model Configuration {
 
 model ScanLog {
   id          Int       @id @default(autoincrement())
-  dataType    String
+  dataType    String   @unique
   status      String
   startedAt   DateTime?
   completedAt DateTime?
   error       String?
+  nextLink    String?
 }
 
 model User {

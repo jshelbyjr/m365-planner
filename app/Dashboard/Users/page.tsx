@@ -31,7 +31,7 @@ export default function UsersPage() {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
-      const res = await fetch('/api/scan');
+      const res = await fetch('/api/scan?dataType=users');
       if (res.ok) {
         const status = await res.json();
         setScanStatus(status);
@@ -61,7 +61,7 @@ export default function UsersPage() {
       const usersRes = await fetch('/api/data/users');
       if (usersRes.ok) setUsers(await usersRes.json());
       // Refetch scan status
-      const statusRes = await fetch('/api/scan');
+      const statusRes = await fetch('/api/scan?dataType=users');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
       setScanStatus({ status: 'FAILED', error: 'Scan failed' });

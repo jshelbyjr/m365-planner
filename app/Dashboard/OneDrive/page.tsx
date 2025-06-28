@@ -44,7 +44,7 @@ export default function OneDriveDashboardPage() {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
-      const res = await fetch('/api/scan');
+      const res = await fetch('/api/scan?dataType=onedrive');
       if (res.ok) {
         const status = await res.json();
         setScanStatus(status);
