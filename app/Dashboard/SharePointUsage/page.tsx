@@ -75,8 +75,22 @@ export default function SharePointUsagePage() {
     { key: 'activeFileCount', label: 'Active File Count' },
     { key: 'pageViewCount', label: 'Page View Count' },
     { key: 'visitedPageCount', label: 'Visited Page Count' },
-    { key: 'storageUsedBytes', label: 'Storage Used (Bytes)' },
-    { key: 'storageAllocatedBytes', label: 'Storage Allocated (Bytes)' },
+    {
+      key: 'storageUsedBytes',
+      label: 'Storage Used (GB)',
+      render: (row: SharePointSiteUsageDetail) =>
+        row.storageUsedBytes && !isNaN(Number(row.storageUsedBytes))
+          ? (Number(row.storageUsedBytes) / (1024 ** 3)).toFixed(2)
+          : '',
+    },
+    {
+      key: 'storageAllocatedBytes',
+      label: 'Storage Allocated (GB)',
+      render: (row: SharePointSiteUsageDetail) =>
+        row.storageAllocatedBytes && !isNaN(Number(row.storageAllocatedBytes))
+          ? (Number(row.storageAllocatedBytes) / (1024 ** 3)).toFixed(2)
+          : '',
+    },
     { key: 'rootWebTemplate', label: 'Root Web Template' },
     { key: 'reportPeriod', label: 'Report Period' },
     { key: 'reportRefreshDate', label: 'Report Refresh Date' },

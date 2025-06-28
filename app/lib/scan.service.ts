@@ -169,6 +169,13 @@ export async function scanSharePoint() {
         let storageLimit = null;
         let filesCount = null;
         let externalSharing = null;
+        // Extract the correct GUID portion as the ID (everything after the first comma)
+        let correctId = site.id;
+        if (typeof site.id === 'string' && site.id.includes(',')) {
+          const parts = site.id.split(',');
+          // Remove the first part (domain), join the rest (handles both 2 and 3 part cases)
+          correctId = parts.slice(1).join(',');
+        }
         try {
           const storage = await client.api(`/sites/${site.id}/drive`).get();
           storageUsed = storage?.quota?.used ? storage.quota.used / (1024 * 1024) : null;
@@ -183,7 +190,7 @@ export async function scanSharePoint() {
           externalSharing = siteDetails.sharingCapability ?? siteDetails.sharingStatus ?? null;
         } catch {}
         return {
-          id: site.id,
+          id: correctId,
           name: site.displayName ?? site.name ?? null,
           url: site.webUrl ?? null,
           storageUsed,
@@ -326,6 +333,7 @@ export async function scanGroups() {
   });
 }
 
+
 /**
  * Handler for SharePoint Site Usage scan
  */
@@ -386,7 +394,7 @@ export async function scanSharePointUsage() {
           data: {
             id: idVal,
             siteId: siteIdVal,
-            siteUrl: siteUrlVal,
+            siteUrl: siteUrlVal, // Will be updated in denormalization step
             ownerDisplayName: ownerDisplayNameVal,
             isDeleted: typeof isDeletedVal === 'string' ? isDeletedVal.toLowerCase() === 'true' : null,
             lastActivityDate: typeof lastActivityDateVal === 'string' && lastActivityDateVal ? new Date(lastActivityDateVal) : null,
@@ -412,6 +420,71 @@ export async function scanSharePointUsage() {
   }
 }
 
+/**
+ * Denormalize SharePoint Usage table by copying siteUrl from SharePoint table
+ */
+
+/**
+ * Batch fetch missing SharePoint site details by ID and update usage records
+ */
+export async function denormalizeSharePointUsageUrls() {
+  const client = await getAuthenticatedClient();
+  // Find all usage records missing either siteUrl or siteName
+  const missingRecords = await prisma.sharePointSiteUsageDetail.findMany({
+    where: {
+      OR: [
+        { siteUrl: null },
+        { siteName: null },
+        { siteUrl: '' },
+        { siteName: '' },
+      ],
+      siteId: { not: null },
+    },
+    select: { id: true, siteId: true },
+  });
+  if (!missingRecords.length) {
+    console.log('[denormalizeSharePointUsageUrls] No missing siteUrl or siteName to update.');
+    return;
+  }
+  // Batch in groups of 20
+  const batchSize = 20;
+  let updatedCount = 0;
+  for (let i = 0; i < missingRecords.length; i += batchSize) {
+    const batch = missingRecords.slice(i, i + batchSize);
+    const batchRequests = batch.map((rec, idx) => ({
+      id: rec.id,
+      method: 'GET',
+      url: `/sites/${rec.siteId}`,
+    }));
+    try {
+      const response = await client.api('/$batch').post({ requests: batchRequests });
+      const responses = response.responses || [];
+      for (const res of responses) {
+        if (res.status === 200 && res.body) {
+          const { id, webUrl, displayName, name } = res.body;
+          // Find the corresponding usage record
+          const usageId = res.id;
+          await prisma.sharePointSiteUsageDetail.update({
+            where: { id: usageId },
+            data: {
+              siteUrl: webUrl ?? null,
+              siteName: displayName ?? name ?? null,
+            },
+          });
+          updatedCount++;
+          console.log(`[denormalizeSharePointUsageUrls] Updated usage id=${usageId} to url=${webUrl}, name=${displayName ?? name}`);
+        } else {
+          console.warn(`[denormalizeSharePointUsageUrls] Batch response error for id=${res.id}: status=${res.status}`);
+        }
+      }
+    } catch (err) {
+      console.error('[denormalizeSharePointUsageUrls] Batch request error:', err);
+    }
+  }
+  console.log(`[denormalizeSharePointUsageUrls] Updated ${updatedCount} records with missing siteUrl or siteName.`);
+}
+
+
 
 /**
  * Map of scan handlers by type
@@ -424,7 +497,11 @@ export const scanHandlers: { [key: string]: () => Promise<void> } = {
   onedrive: scanOneDrive,
   licenses: scanLicenses,
   domains: scanDomains,
-  sharepointUsage: scanSharePointUsage,
+  sharepointUsage: async () => {
+    await scanSharePoint();
+    await scanSharePointUsage();
+    await denormalizeSharePointUsageUrls();
+  },
 };
 
 /**
