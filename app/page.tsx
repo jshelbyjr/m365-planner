@@ -2,6 +2,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {
+  getTotal,
+  getActiveUsers,
+  getDisabledUsers,
+  getTotalStorage,
+  getSharePointStorageForEntities,
+  getStandaloneSharePointStorage,
+  getTotalAssignedLicenses
+} from './lib/metrics';
 import { Box, Paper, Typography } from '@mui/material';
 import Image from 'next/image';
 import GroupIcon from '@mui/icons-material/Groups';
@@ -81,34 +90,35 @@ export default function DashboardPage() {
 
 
 
-  // Calculate metrics for cards
-  const totalDomains = domains.length;
+
+  // Calculate metrics for cards using utility functions
+  const totalDomains = getTotal(domains);
   const verifiedDomains = domains.filter((d: Domain) => d.status?.toLowerCase() === 'verified').length;
   const unverifiedDomains = totalDomains - verifiedDomains;
 
-  const totalUsers = users.length;
-  const activeUsers = users.filter((u: User) => u.accountEnabled).length;
-  const disabledUsers = totalUsers - activeUsers;
+  const totalUsers = getTotal(users);
+  const activeUsers = getActiveUsers(users);
+  const disabledUsers = getDisabledUsers(users);
 
-  const totalOneDrives = oneDrives.length;
-  const totalOneDriveStorage = oneDrives.reduce((sum: number, od: OneDrive) => sum + (typeof od.size === 'number' ? od.size : 0), 0) / (1024 ** 3); // bytes to GB
+  const totalOneDrives = getTotal(oneDrives);
+  const totalOneDriveStorage = getTotalStorage(oneDrives, 'size');
 
-  const totalSharePointSites = sharePointSites.length;
-  const totalSharePointStorage = sharePointSites.reduce((sum: number, s: SharePointSite) => sum + (typeof s.storageUsed === 'number' ? s.storageUsed : 0), 0) / (1024 ** 3); // bytes to GB
+  const totalSharePointSites = getTotal(sharePointSites);
+  const totalSharePointStorage = getTotalStorage(sharePointSites, 'storageUsed');
 
-  const totalGroups = m365Groups.length;
+  const totalGroups = getTotal(m365Groups);
   // For group and team storage, assume SharePoint site is associated by index (or add logic if available)
-  const groupStorage = sharePointSites.slice(0, totalGroups).reduce((sum, s) => sum + (typeof s.storageUsed === 'number' ? s.storageUsed : 0), 0) / (1024 ** 3);
+  const groupStorage = getSharePointStorageForEntities(sharePointSites, 0, totalGroups);
 
-  const totalTeams = teams.length;
-  const teamStorage = sharePointSites.slice(totalGroups, totalGroups + totalTeams).reduce((sum, s) => sum + (typeof s.storageUsed === 'number' ? s.storageUsed : 0), 0) / (1024 ** 3);
+  const totalTeams = getTotal(teams);
+  const teamStorage = getSharePointStorageForEntities(sharePointSites, totalGroups, totalGroups + totalTeams);
 
   // The rest of SharePoint storage is for standalone sites
-  const standaloneSharePointStorage = totalSharePointStorage - groupStorage - teamStorage;
+  const standaloneSharePointStorage = getStandaloneSharePointStorage(totalSharePointStorage, groupStorage, teamStorage);
 
   // Licenses: unique SKUs and total assigned
   const uniqueSkus = new Set(licenses.map((l: any) => l.skuPartNumber)).size;
-  const totalAssignedLicenses = licenses.reduce((sum: number, l: any) => sum + (typeof l.assignedUnits === 'number' ? l.assignedUnits : 0), 0);
+  const totalAssignedLicenses = getTotalAssignedLicenses(licenses);
 
   // Chart data for collaboration distribution (ensure M365 Groups is included)
   const collabEntityChart: ChartDataItem[] = [
