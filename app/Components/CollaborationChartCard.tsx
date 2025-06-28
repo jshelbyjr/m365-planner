@@ -20,7 +20,7 @@ const CollaborationChartCard: React.FC<CollaborationChartCardProps> = ({ title, 
     <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
       <Typography variant="h6" gutterBottom>{title}</Typography>
       <Box sx={{ width: '100%', height: 200 }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="90%" height="90%">
           <PieChart>
             <Pie
               data={data}

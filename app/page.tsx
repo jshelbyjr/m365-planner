@@ -3,6 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
+import Image from 'next/image';
+import GroupIcon from '@mui/icons-material/Groups';
+import LicenseIcon from '@mui/icons-material/WorkspacePremium';
+import PersonIcon from '@mui/icons-material/Person';
+import PublicIcon from '@mui/icons-material/Public';
 import CollaborationChartCard, { ChartDataItem } from './Components/CollaborationChartCard';
 
 // Define types for our data
@@ -141,7 +146,10 @@ export default function DashboardPage() {
         {/* Domains */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 30%' }, minWidth: 280 }}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>Domains</Typography>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <PublicIcon color="primary" />
+              <Typography variant="h6" gutterBottom>Domains</Typography>
+            </Box>
             <Typography>Total: {totalDomains}</Typography>
             <Typography color="success.main">Verified: {verifiedDomains}</Typography>
             <Typography color="warning.main">Unverified: {unverifiedDomains}</Typography>
@@ -150,7 +158,10 @@ export default function DashboardPage() {
         {/* Licenses */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 30%' }, minWidth: 280 }}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>Licenses</Typography>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <LicenseIcon color="primary" />
+              <Typography variant="h6" gutterBottom>Licenses</Typography>
+            </Box>
             <Typography>Unique SKUs: {uniqueSkus}</Typography>
             <Typography>Total Assigned: {totalAssignedLicenses}</Typography>
           </Paper>
@@ -158,7 +169,10 @@ export default function DashboardPage() {
         {/* Users */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 30%' }, minWidth: 280 }}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>Users</Typography>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <PersonIcon color="primary" />
+              <Typography variant="h6" gutterBottom>Users</Typography>
+            </Box>
             <Typography>Total: {totalUsers}</Typography>
             <Typography color="success.main">Active: {activeUsers}</Typography>
             <Typography color="error.main">Disabled: {disabledUsers}</Typography>
@@ -171,7 +185,10 @@ export default function DashboardPage() {
         {/* SharePoint */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>SharePoint</Typography>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <Image src="/icons8-microsoft-sharepoint-2019-50.png" alt="SharePoint" width={24} height={24} />
+              <Typography variant="h6" gutterBottom>SharePoint</Typography>
+            </Box>
             <Typography>Total Sites: {totalSharePointSites}</Typography>
             <Typography>Total Storage: {totalSharePointStorage.toFixed(2)} GB</Typography>
           </Paper>
@@ -179,7 +196,10 @@ export default function DashboardPage() {
         {/* OneDrive */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>OneDrive</Typography>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <Image src="/icons8-microsoft-onedrive-2019-50.png" alt="OneDrive" width={24} height={24} />
+              <Typography variant="h6" gutterBottom>OneDrive</Typography>
+            </Box>
             <Typography>Total Accounts: {totalOneDrives}</Typography>
             <Typography>Total Storage: {totalOneDriveStorage.toFixed(2)} GB</Typography>
           </Paper>
@@ -187,7 +207,10 @@ export default function DashboardPage() {
         {/* M365 Groups */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>M365 Groups</Typography>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <GroupIcon color="primary" />
+              <Typography variant="h6" gutterBottom>M365 Groups</Typography>
+            </Box>
             <Typography>Total Groups: {totalGroups}</Typography>
             <Typography>Total Storage: {groupStorage.toFixed(2)} GB</Typography>
           </Paper>
@@ -195,7 +218,10 @@ export default function DashboardPage() {
         {/* Teams */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 22%' }, minWidth: 220 }}>
           <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>Microsoft Teams</Typography>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <Image src="/icons8-microsoft-teams-2019-50.png" alt="Teams" width={24} height={24} />
+              <Typography variant="h6" gutterBottom>Microsoft Teams</Typography>
+            </Box>
             <Typography>Total Teams: {totalTeams}</Typography>
             <Typography>Total Storage: {teamStorage.toFixed(2)} GB</Typography>
           </Paper>
