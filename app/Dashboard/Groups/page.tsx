@@ -2,16 +2,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import DataTable from '../../Components/DataTable';
+
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
-
-type Group = {
-  id: string;
-  displayName: string;
-  mailNickname?: string;
-  memberCount?: number;
-  visibility?: string;
-};
+import type { Group } from '../../types';
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);

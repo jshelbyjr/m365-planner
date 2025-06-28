@@ -5,16 +5,9 @@ import { useEffect, useState } from 'react';
 import { Typography, CircularProgress } from '@mui/material';
 import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
-import ExportCSVButton from '../../Components/ExportCSVButton';
 
-interface Team {
-  id: string;
-  displayName: string;
-  description?: string;
-  visibility?: string;
-  memberCount?: number;
-  totalChannelCount?: number;
-}
+import ExportCSVButton from '../../Components/ExportCSVButton';
+import type { Team } from '../../types';
 
 export default function TeamsDetailPage() {
   const [teams, setTeams] = useState<Team[]>([]);

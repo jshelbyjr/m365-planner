@@ -2,13 +2,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import DataTable from '../../Components/DataTable';
+
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
-
-type Domain = {
-  id: string;
-  status?: string;
-};
+import type { Domain } from '../../types';
 
 export default function DomainsPage() {
   const [domains, setDomains] = useState<Domain[]>([]);
