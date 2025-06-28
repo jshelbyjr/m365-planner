@@ -6,45 +6,73 @@ export async function scanSharePointUsage() {
   await prisma.sharePointSiteUsageDetail.deleteMany({});
   try {
     // Microsoft Graph API: /reports/getSharePointSiteUsageDetail(period='D180')
-    const response = await client.api("/reports/getSharePointSiteUsageDetail(period='D180')").get();
-    console.log('[SharePointUsage] Raw API response:', response);
-    // The response is a CSV string, so we need to parse it
-    const csv = response;
-    const lines = typeof csv === 'string' ? csv.split('\n').filter(Boolean) : [];
-    console.log(`[SharePointUsage] Parsed ${lines.length} lines from CSV`);
-    if (lines.length < 2) {
+    const responseStream = await client.api("/reports/getSharePointSiteUsageDetail(period='D180')").getStream();
+    const csv = await streamToString(responseStream);
+    const parse = (await import('csv-parse/sync')).parse;
+    const records = parse(csv, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+    if (!records.length) {
       console.warn('[SharePointUsage] No data lines found in CSV');
       return;
     }
-    const headers: string[] = lines[0].split(',').map((h: string) => h.trim().replace(/\"/g, ''));
-    const records = lines.slice(1).map((line: string) => {
-      // Handle quoted CSV values
-      const values = line.match(/("[^"]*"|[^,]+)/g)?.map((v) => v.replace(/^"|"$/g, '')) || [];
-      const obj: Record<string, any> = {};
-      headers.forEach((h: string, i: number) => {
-        obj[h] = values[i] ?? null;
-      });
-      return obj;
-    });
+    const headers = Object.keys(records[0]);
+    console.log('[SharePointUsage] CSV Headers:', headers);
+    console.log('[SharePointUsage] First data row:', records[0]);
     console.log(`[SharePointUsage] Parsed ${records.length} records`);
     // Map and insert records
     for (const rec of records) {
       try {
+        // Helper to get value by possible header variants
+        const get = (...keys: string[]) => {
+          for (const k of keys) {
+            const norm = k.toLowerCase().replace(/\s+/g, '');
+            for (const h of headers) {
+              if (h.toLowerCase().replace(/\s+/g, '') === norm) {
+                return rec[h];
+              }
+            }
+          }
+          return null;
+        };
+        const idVal = get('Site Id') || '';
+        const siteIdVal = get('Site Id') || null;
+        const siteUrlVal = get('Site URL') || null;
+        const ownerDisplayNameVal = get('Owner Display Name') || null;
+        const isDeletedVal = get('Is Deleted');
+        const lastActivityDateVal = get('Last Activity Date');
+        const fileCountVal = get('File Count');
+        const activeFileCountVal = get('Active File Count');
+        const pageViewCountVal = get('Page View Count');
+        const visitedPageCountVal = get('Visited Page Count');
+        const storageUsedBytesVal = get('Storage Used (Byte)');
+        const storageAllocatedBytesVal = get('Storage Allocated (Byte)');
+        const rootWebTemplateVal = get('Root Web Template');
+        const ownerPrincipalNameVal = get('Owner Principal Name');
+        const reportPeriodVal = get('Report Period') || null;
+        const reportRefreshDateVal = get('Report Refresh Date');
+        const siteNameVal = get('Site Name') || null;
         await prisma.sharePointSiteUsageDetail.create({
           data: {
-            id: rec['SiteId'] || rec['Site Id'],
-            siteId: rec['SiteId'] || rec['Site Id'],
-            siteUrl: rec['SiteUrl'] || rec['Site Url'],
-            siteName: rec['SiteName'] || rec['Site Name'],
-            ownerDisplayName: rec['OwnerDisplayName'] || rec['Owner Display Name'],
-            lastActivityDate: rec['LastActivityDate'] ? new Date(rec['LastActivityDate']) : null,
-            fileCount: rec['FileCount'] ? parseInt(rec['FileCount'], 10) : null,
-            activeFileCount: rec['ActiveFileCount'] ? parseInt(rec['ActiveFileCount'], 10) : null,
-            pageViewCount: rec['PageViewCount'] ? parseInt(rec['PageViewCount'], 10) : null,
-            storageUsedMB: rec['StorageUsedMB'] ? parseFloat(rec['StorageUsedMB']) : null,
-            storageAllocatedMB: rec['StorageAllocatedMB'] ? parseFloat(rec['StorageAllocatedMB']) : null,
-            reportPeriod: rec['ReportPeriod'] || rec['Report Period'],
-            reportRefreshDate: rec['ReportRefreshDate'] ? new Date(rec['ReportRefreshDate']) : null,
+            id: idVal,
+            siteId: siteIdVal,
+            siteUrl: siteUrlVal,
+            ownerDisplayName: ownerDisplayNameVal,
+            isDeleted: typeof isDeletedVal === 'string' ? isDeletedVal.toLowerCase() === 'true' : null,
+            lastActivityDate: typeof lastActivityDateVal === 'string' && lastActivityDateVal ? new Date(lastActivityDateVal) : null,
+            fileCount: typeof fileCountVal === 'string' && fileCountVal ? parseInt(fileCountVal, 10) : null,
+            activeFileCount: typeof activeFileCountVal === 'string' && activeFileCountVal ? parseInt(activeFileCountVal, 10) : null,
+            pageViewCount: typeof pageViewCountVal === 'string' && pageViewCountVal ? parseInt(pageViewCountVal, 10) : null,
+            visitedPageCount: typeof visitedPageCountVal === 'string' && visitedPageCountVal ? parseInt(visitedPageCountVal, 10) : null,
+            storageUsedBytes: typeof storageUsedBytesVal === 'string' && storageUsedBytesVal ? BigInt(storageUsedBytesVal) : null,
+            storageAllocatedBytes: typeof storageAllocatedBytesVal === 'string' && storageAllocatedBytesVal ? BigInt(storageAllocatedBytesVal) : null,
+            rootWebTemplate: rootWebTemplateVal,
+            ownerPrincipalName: ownerPrincipalNameVal,
+            reportPeriod: reportPeriodVal,
+            reportRefreshDate: typeof reportRefreshDateVal === 'string' && reportRefreshDateVal ? new Date(reportRefreshDateVal) : null,
+            siteName: siteNameVal,
           },
         });
       } catch (err) {
@@ -54,6 +82,14 @@ export async function scanSharePointUsage() {
   } catch (err) {
     console.error('[SharePointUsage] Error in scanSharePointUsage:', err);
   }
+}
+
+async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString('utf8');
 }
 // file: lib/scan.service.ts
 // Modular scan logic for each asset type in M365 Planner

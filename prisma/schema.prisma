@@ -121,17 +121,21 @@ model License {
 }
 
 model SharePointSiteUsageDetail {
-  id                String   @id @unique
-  siteId            String?
-  siteUrl           String?
-  siteName          String?
-  ownerDisplayName  String?
-  lastActivityDate  DateTime?
-  fileCount         Int?
-  activeFileCount   Int?
-  pageViewCount     Int?
-  storageUsedMB     Float?
-  storageAllocatedMB Float?
-  reportPeriod      String?
-  reportRefreshDate DateTime?
+  id                     String   @id @unique
+  siteId                 String?
+  siteUrl                String?
+  ownerDisplayName       String?
+  isDeleted              Boolean?
+  lastActivityDate       DateTime?
+  fileCount              Int?
+  activeFileCount        Int?
+  pageViewCount          Int?
+  visitedPageCount       Int?
+  storageUsedBytes       BigInt?
+  storageAllocatedBytes  BigInt?
+  rootWebTemplate        String?
+  ownerPrincipalName     String?
+  reportPeriod           String?
+  reportRefreshDate      DateTime?
+  siteName               String?
 }

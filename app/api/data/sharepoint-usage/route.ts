@@ -7,5 +7,11 @@ import { prisma } from '@/app/lib/prisma';
  */
 export async function GET(req: NextRequest) {
   const usageDetails = await prisma.sharePointSiteUsageDetail.findMany();
-  return NextResponse.json(usageDetails);
+  // Convert BigInt fields to strings for JSON serialization
+  const safeDetails = usageDetails.map((item) => ({
+    ...item,
+    storageUsedBytes: item.storageUsedBytes !== null && item.storageUsedBytes !== undefined ? item.storageUsedBytes.toString() : null,
+    storageAllocatedBytes: item.storageAllocatedBytes !== null && item.storageAllocatedBytes !== undefined ? item.storageAllocatedBytes.toString() : null,
+  }));
+  return NextResponse.json(safeDetails);
 }

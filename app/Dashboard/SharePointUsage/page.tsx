@@ -12,12 +12,16 @@ type SharePointSiteUsageDetail = {
   siteUrl?: string;
   siteName?: string;
   ownerDisplayName?: string;
+  isDeleted?: boolean;
   lastActivityDate?: string;
   fileCount?: number;
   activeFileCount?: number;
   pageViewCount?: number;
-  storageUsedMB?: number;
-  storageAllocatedMB?: number;
+  visitedPageCount?: number;
+  storageUsedBytes?: string;
+  storageAllocatedBytes?: string;
+  rootWebTemplate?: string;
+  ownerPrincipalName?: string;
   reportPeriod?: string;
   reportRefreshDate?: string;
 };
@@ -63,13 +67,17 @@ export default function SharePointUsagePage() {
   const columns = [
     { key: 'siteName', label: 'Site Name' },
     { key: 'siteUrl', label: 'Site URL' },
-    { key: 'ownerDisplayName', label: 'Owner' },
-    { key: 'lastActivityDate', label: 'Last Activity' },
+    { key: 'ownerDisplayName', label: 'Owner Display Name' },
+    { key: 'ownerPrincipalName', label: 'Owner Principal Name' },
+    { key: 'isDeleted', label: 'Is Deleted' },
+    { key: 'lastActivityDate', label: 'Last Activity Date' },
     { key: 'fileCount', label: 'File Count' },
     { key: 'activeFileCount', label: 'Active File Count' },
-    { key: 'pageViewCount', label: 'Page Views' },
-    { key: 'storageUsedMB', label: 'Storage Used (MB)' },
-    { key: 'storageAllocatedMB', label: 'Storage Allocated (MB)' },
+    { key: 'pageViewCount', label: 'Page View Count' },
+    { key: 'visitedPageCount', label: 'Visited Page Count' },
+    { key: 'storageUsedBytes', label: 'Storage Used (Bytes)' },
+    { key: 'storageAllocatedBytes', label: 'Storage Allocated (Bytes)' },
+    { key: 'rootWebTemplate', label: 'Root Web Template' },
     { key: 'reportPeriod', label: 'Report Period' },
     { key: 'reportRefreshDate', label: 'Report Refresh Date' },
   ];
