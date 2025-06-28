@@ -1,8 +1,11 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
-import { Typography, CircularProgress } from '@mui/material';
+
+
+import React, { useState, useEffect } from 'react';
+import { useApiData } from '../../../lib/useApiData';
+import { CircularProgress, Typography } from '@mui/material';
 import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
@@ -17,26 +20,13 @@ interface SharePointSite {
   m365Group?: string | null;
 }
 
+
 export default function SharePointDashboardPage() {
-  const [sites, setSites] = useState<SharePointSite[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, error, refetch } = useApiData<SharePointSite[]>('/api/data/sharepoint');
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
 
-  // Fetch SharePoint sites
-  useEffect(() => {
-    const fetchSites = async () => {
-      setLoading(true);
-      const res = await fetch('/api/data/sharepoint');
-      if (res.ok) {
-        const allSites: SharePointSite[] = await res.json();
-        // Only show sites not related to Teams or M365 Groups
-        const filtered = allSites.filter(site => !site.teams && !site.m365Group);
-        setSites(filtered);
-      }
-      setLoading(false);
-    };
-    fetchSites();
-  }, []);
+  // Only show sites not related to Teams or M365 Groups
+  const sites = (data || []).filter(site => !site.teams && !site.m365Group);
 
   // Fetch scan status for SharePoint
   useEffect(() => {
@@ -48,12 +38,7 @@ export default function SharePointDashboardPage() {
         setScanStatus(status);
         // If scan just completed, refresh sites
         if (status.status === 'COMPLETED') {
-          const sitesRes = await fetch('/api/data/sharepoint');
-          if (sitesRes.ok) {
-            const allSites: SharePointSite[] = await sitesRes.json();
-            const filtered = allSites.filter(site => !site.teams && !site.m365Group);
-            setSites(filtered);
-          }
+          refetch();
         }
       }
     };
@@ -62,7 +47,7 @@ export default function SharePointDashboardPage() {
       interval = setInterval(fetchScanStatus, 2000);
     }
     return () => clearInterval(interval);
-  }, [scanStatus?.status]);
+  }, [scanStatus?.status, refetch]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
@@ -72,14 +57,7 @@ export default function SharePointDashboardPage() {
       body: JSON.stringify({ dataType: 'sharepoint' })
     });
     if (res.ok) {
-      // Optionally refetch sites after scan
-      const sitesRes = await fetch('/api/data/sharepoint');
-      if (sitesRes.ok) {
-        const allSites: SharePointSite[] = await sitesRes.json();
-        const filtered = allSites.filter(site => !site.teams && !site.m365Group);
-        setSites(filtered);
-      }
-      // Refetch scan status
+      refetch();
       const statusRes = await fetch('/api/scan?dataType=sharepoint');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
@@ -95,11 +73,12 @@ export default function SharePointDashboardPage() {
   ];
 
   // Handler to fetch all SharePoint sites and export as CSV
+
   const handleExportAllSites = async () => {
     const res = await fetch('/api/data/sharepoint');
     if (res.ok) {
       const allSites: SharePointSite[] = await res.json();
-      return allSites; // Export all sites, no filter
+      return allSites;
     }
     return [];
   };
@@ -126,6 +105,9 @@ export default function SharePointDashboardPage() {
               )}
               {scanStatus?.status === 'FAILED' && (
                 <span className="text-red-600">Error: {scanStatus.error}</span>
+              )}
+              {error && (
+                <span className="text-red-600">Error: {error}</span>
               )}
             </>
           )}

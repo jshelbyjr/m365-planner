@@ -1,36 +1,21 @@
 // file: app/Dashboard/Teams/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Typography, CircularProgress } from '@mui/material';
+
+import React, { useState, useEffect } from 'react';
+import { useApiData } from '../../../lib/useApiData';
+import { CircularProgress } from '@mui/material';
 import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
-
 import ExportCSVButton from '../../Components/ExportCSVButton';
 import type { Team } from '../../types';
 
+
 export default function TeamsDetailPage() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, error, refetch } = useApiData<Team[]>('/api/data/teams');
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
+  const teams = Array.isArray(data) ? data : (data as any)?.teams || [];
 
-  // Fetch Teams
-  useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const res = await fetch('/api/data/teams');
-        if (res.ok) {
-          const data = await res.json();
-          setTeams(Array.isArray(data) ? data : data.teams || []);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTeams();
-  }, []);
-
-  // Fetch scan status for teams
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
@@ -38,13 +23,8 @@ export default function TeamsDetailPage() {
       if (res.ok) {
         const status = await res.json();
         setScanStatus(status);
-        // If scan just completed, refresh teams
         if (status.status === 'COMPLETED') {
-          const teamsRes = await fetch('/api/data/teams');
-          if (teamsRes.ok) {
-            const data = await teamsRes.json();
-            setTeams(Array.isArray(data) ? data : data.teams || []);
-          }
+          refetch();
         }
       }
     };
@@ -53,7 +33,7 @@ export default function TeamsDetailPage() {
       interval = setInterval(fetchScanStatus, 2000);
     }
     return () => clearInterval(interval);
-  }, [scanStatus?.status]);
+  }, [scanStatus?.status, refetch]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
@@ -63,13 +43,7 @@ export default function TeamsDetailPage() {
       body: JSON.stringify({ dataType: 'teams' })
     });
     if (res.ok) {
-      // Optionally refetch teams after scan
-      const teamsRes = await fetch('/api/data/teams');
-      if (teamsRes.ok) {
-        const data = await teamsRes.json();
-        setTeams(Array.isArray(data) ? data : data.teams || []);
-      }
-      // Refetch scan status
+      refetch();
       const statusRes = await fetch('/api/scan?dataType=teams');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
@@ -120,6 +94,9 @@ export default function TeamsDetailPage() {
               )}
               {scanStatus?.status === 'FAILED' && (
                 <span className="text-red-600">Error: {scanStatus.error}</span>
+              )}
+              {error && (
+                <span className="text-red-600">Error: {error}</span>
               )}
             </>
           )}

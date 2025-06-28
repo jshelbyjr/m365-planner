@@ -53,6 +53,12 @@ export async function POST(request: Request) {
 async function runScanInBackground(dataType: string) {
   try {
     console.log("Starting scan for", dataType);
+    // Ensure scanLog exists before updating
+    await prisma.scanLog.upsert({
+      where: { dataType },
+      update: {},
+      create: { dataType, status: Status.TESTING, startedAt: new Date() },
+    });
     await runScan(dataType);
     await prisma.scanLog.update({
       where: { dataType },
@@ -60,6 +66,12 @@ async function runScanInBackground(dataType: string) {
     });
   } catch (e: any) {
     console.error("Scan failed:", e);
+    // Ensure scanLog exists before updating error
+    await prisma.scanLog.upsert({
+      where: { dataType },
+      update: {},
+      create: { dataType, status: Status.ERROR, startedAt: new Date() },
+    });
     await prisma.scanLog.update({
       where: { dataType },
       data: { status: Status.ERROR, completedAt: new Date(), error: e.message },

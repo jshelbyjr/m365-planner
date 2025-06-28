@@ -1,47 +1,40 @@
 // Groups DataTable Page
 'use client';
-import { useEffect, useState } from 'react';
-import DataTable from '../../Components/DataTable';
 
+import React, { useState, useEffect } from 'react';
+import { useApiData } from '../../../lib/useApiData';
+import { CircularProgress } from '@mui/material';
+import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
 import type { Group } from '../../types';
 
+
 export default function GroupsPage() {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { data, loading, error, refetch } = useApiData<{ m365Groups: Group[] }>('/api/data/groups');
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
+  const groups = (data && data.m365Groups) ? data.m365Groups : [];
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    let isMounted = true;
-
-    const fetchStatusAndGroups = async () => {
+    let interval: NodeJS.Timeout;
+    const fetchScanStatus = async () => {
       const scanRes = await fetch('/api/scan?dataType=groups');
-      let status = null;
       if (scanRes.ok) {
-        status = await scanRes.json();
-        if (!isMounted) return;
+        const status = await scanRes.json();
         setScanStatus(status);
-      }
-      // Always fetch groups after scan completes or is idle, or on mount
-      if (!status || status.status === 'COMPLETED' || status.status === 'IDLE') {
-        const groupsRes = await fetch('/api/data/groups');
-        if (groupsRes.ok) {
-          const { m365Groups } = await groupsRes.json();
-          setGroups(m365Groups);
+        if (!status || status.status === 'COMPLETED' || status.status === 'IDLE') {
+          refetch();
         }
       }
     };
-
-    fetchStatusAndGroups();
+    fetchScanStatus();
     if (scanStatus?.status === 'IN_PROGRESS') {
-      interval = setInterval(fetchStatusAndGroups, 2000);
+      interval = setInterval(fetchScanStatus, 2000);
     }
     return () => {
-      isMounted = false;
       if (interval) clearInterval(interval);
     };
-  }, [scanStatus?.status]);
+  }, [scanStatus?.status, refetch]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
@@ -98,16 +91,23 @@ export default function GroupsPage() {
               {scanStatus?.status === 'FAILED' && (
                 <span className="text-red-600">Error: {scanStatus.error}</span>
               )}
+              {error && (
+                <span className="text-red-600">Error: {error}</span>
+              )}
             </>
           )}
         />
       </div>
-      <DataTable
-        title={`M365 Groups (${groups.length})`}
-        data={groups}
-        displayKey="displayName"
-        columns={columns}
-      />
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <DataTable
+          title={`M365 Groups (${groups.length})`}
+          data={groups}
+          displayKey="displayName"
+          columns={columns}
+        />
+      )}
     </main>
   );
 }

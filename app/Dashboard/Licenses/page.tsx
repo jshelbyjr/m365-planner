@@ -1,7 +1,9 @@
 
 "use client";
-import React, { useEffect, useState } from 'react';
-import { Typography, Box } from '@mui/material';
+
+import React, { useState, useEffect } from 'react';
+import { useApiData } from '../../../lib/useApiData';
+import { CircularProgress, Typography, Box } from '@mui/material';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import DataTable from '../../Components/DataTable';
 import ExportCSVButton from '../../Components/ExportCSVButton';
@@ -33,18 +35,10 @@ const LICENSE_COLUMNS = [
   { key: 'suspendedUnits', label: 'Suspended Units' },
 ];
 
+
 const LicenseDashboardPage = () => {
-  const [licenses, setLicenses] = useState<License[]>([]);
+  const { data: licenses, loading, error, refetch } = useApiData<License[]>('/api/data/licenses');
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
-
-  const fetchLicenses = async () => {
-    const res = await fetch('/api/data/licenses');
-    if (res.ok) setLicenses(await res.json());
-  };
-
-  useEffect(() => {
-    fetchLicenses();
-  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -54,7 +48,7 @@ const LicenseDashboardPage = () => {
         const status = await res.json();
         setScanStatus(status);
         if (status.status === 'COMPLETED') {
-          fetchLicenses();
+          refetch();
         }
       }
     };
@@ -63,7 +57,7 @@ const LicenseDashboardPage = () => {
       interval = setInterval(fetchScanStatus, 2000);
     }
     return () => clearInterval(interval);
-  }, [scanStatus?.status]);
+  }, [scanStatus?.status, refetch]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
@@ -73,7 +67,7 @@ const LicenseDashboardPage = () => {
       body: JSON.stringify({ dataType: 'licenses' })
     });
     if (res.ok) {
-      fetchLicenses();
+      refetch();
       const statusRes = await fetch('/api/scan?dataType=licenses');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
@@ -98,6 +92,9 @@ const LicenseDashboardPage = () => {
               {scanStatus?.status === 'FAILED' && (
                 <span style={{ color: 'red' }}>Error: {scanStatus.error}</span>
               )}
+              {error && (
+                <span style={{ color: 'red' }}>Error: {error}</span>
+              )}
             </>
           )}
         />
@@ -106,14 +103,18 @@ const LicenseDashboardPage = () => {
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
           License Data
         </Typography>
-        <ExportCSVButton data={licenses} columns={LICENSE_COLUMNS} fileName="licenses.csv" />
+        <ExportCSVButton data={licenses || []} columns={LICENSE_COLUMNS} fileName="licenses.csv" />
       </Box>
-      <DataTable
-        title="Licenses"
-        data={licenses}
-        columns={LICENSE_COLUMNS}
-        displayKey="skuPartNumber"
-      />
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <DataTable
+          title="Licenses"
+          data={licenses || []}
+          columns={LICENSE_COLUMNS}
+          displayKey="skuPartNumber"
+        />
+      )}
     </Box>
   );
 };

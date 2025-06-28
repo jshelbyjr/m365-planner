@@ -1,25 +1,19 @@
 // Domains DataTable Page
 'use client';
-import { useEffect, useState } from 'react';
-import DataTable from '../../Components/DataTable';
 
+import React, { useState, useEffect } from 'react';
+import { useApiData } from '../../../lib/useApiData';
+import { CircularProgress } from '@mui/material';
+import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
 import type { Domain } from '../../types';
 
+
 export default function DomainsPage() {
-  const [domains, setDomains] = useState<Domain[]>([]);
+  const { data: domains, loading, error, refetch } = useApiData<Domain[]>('/api/data/domains');
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
 
-  useEffect(() => {
-    const fetchDomains = async () => {
-      const res = await fetch('/api/data/domains');
-      if (res.ok) setDomains(await res.json());
-    };
-    fetchDomains();
-  }, []);
-
-  // Fetch latest scan status for domains
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
@@ -29,8 +23,7 @@ export default function DomainsPage() {
         setScanStatus(status);
         // If scan just completed, refresh domains
         if (status.status === 'COMPLETED') {
-          const domainsRes = await fetch('/api/data/domains');
-          if (domainsRes.ok) setDomains(await domainsRes.json());
+          refetch();
         }
       }
     };
@@ -39,7 +32,7 @@ export default function DomainsPage() {
       interval = setInterval(fetchScanStatus, 2000);
     }
     return () => clearInterval(interval);
-  }, [scanStatus?.status]);
+  }, [scanStatus?.status, refetch]);
 
   const handleStartScan = async () => {
     setScanStatus({ status: 'IN_PROGRESS' });
@@ -49,10 +42,7 @@ export default function DomainsPage() {
       body: JSON.stringify({ dataType: 'domains' })
     });
     if (res.ok) {
-      // Optionally refetch domains after scan
-      const domainsRes = await fetch('/api/data/domains');
-      if (domainsRes.ok) setDomains(await domainsRes.json());
-      // Refetch scan status
+      refetch();
       const statusRes = await fetch('/api/scan?dataType=domains');
       if (statusRes.ok) setScanStatus(await statusRes.json());
     } else {
@@ -79,7 +69,7 @@ export default function DomainsPage() {
     <main className="p-8">
       <h1 className="text-2xl font-bold mb-4 flex items-center">Domains
         <ExportCSVButton
-          data={domains}
+          data={domains || []}
           columns={columns}
           fileName="domains.csv"
           // @ts-ignore
@@ -98,16 +88,23 @@ export default function DomainsPage() {
               {scanStatus?.status === 'FAILED' && (
                 <span className="text-red-600">Error: {scanStatus.error}</span>
               )}
+              {error && (
+                <span className="text-red-600">Error: {error}</span>
+              )}
             </>
           )}
         />
       </div>
-      <DataTable
-        title={`Domains (${domains.length})`}
-        data={domains}
-        displayKey="id"
-        columns={columns}
-      />
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <DataTable
+          title={`Domains (${domains ? domains.length : 0})`}
+          data={domains || []}
+          displayKey="id"
+          columns={columns}
+        />
+      )}
     </main>
   );
 }
