@@ -112,10 +112,10 @@ export default function DashboardPage() {
   const totalOneDriveStorage = getTotalStorage(oneDrives, 'size');
 
 
-  // Use SharePoint Usage table for totals
-  const totalSharePointSites = sharePointUsage.length;
-  // Sum in bytes, then convert to GB for display
-  const totalSharePointStorageBytes = sharePointUsage.reduce((sum, row) => {
+  // Use SharePoint Usage table for totals, but only standalone sites (not connected to group/team)
+  const standaloneSharePointSites = sharePointUsage.filter(row => row.rootWebTemplate !== 'Group');
+  const totalSharePointSites = standaloneSharePointSites.length;
+  const totalSharePointStorageBytes = standaloneSharePointSites.reduce((sum, row) => {
     const val = row.storageUsedBytes;
     if (val === undefined || val === null || val === '') return sum;
     const num = typeof val === 'bigint' ? Number(val) : Number(val);
@@ -124,12 +124,47 @@ export default function DashboardPage() {
   }, 0);
   const totalSharePointStorageGB = totalSharePointStorageBytes / (1024 ** 3);
 
-  const totalGroups = getTotal(m365Groups);
-  // For group and team storage, assume SharePoint site is associated by index (or add logic if available)
-  const groupStorage = getSharePointStorageForEntities(sharePointSites, 0, totalGroups);
 
-  const totalTeams = getTotal(teams);
-  const teamStorage = getSharePointStorageForEntities(sharePointSites, totalGroups, totalGroups + totalTeams);
+  // Only count unique groups (not also teams)
+  const teamIds = new Set(teams.map(t => t.id));
+  const uniqueGroups = m365Groups.filter(g => !teamIds.has(g.id));
+  const totalGroups = uniqueGroups.length;
+
+  // Calculate storage for M365 Groups and Teams from SharePoint usage data
+  const groupIds = new Set(uniqueGroups.map(g => String(g.id).toLowerCase()));
+  const groupStorageBytes = sharePointUsage.reduce((sum, row) => {
+    if (
+      row.rootWebTemplate === 'Group' &&
+      row.siteId &&
+      groupIds.has(String(row.siteId).toLowerCase())
+    ) {
+      const val = row.storageUsedBytes;
+      if (val === undefined || val === null || val === '') return sum;
+      const num = typeof val === 'bigint' ? Number(val) : Number(val);
+      if (isNaN(num)) return sum;
+      return sum + num;
+    }
+    return sum;
+  }, 0);
+  const groupStorage = groupStorageBytes / (1024 ** 3);
+
+  const teamIdsLower = new Set(teams.map(t => String(t.id).toLowerCase()));
+  const teamStorageBytes = sharePointUsage.reduce((sum, row) => {
+    if (
+      row.rootWebTemplate === 'Group' &&
+      row.siteId &&
+      teamIdsLower.has(String(row.siteId).toLowerCase())
+    ) {
+      const val = row.storageUsedBytes;
+      if (val === undefined || val === null || val === '') return sum;
+      const num = typeof val === 'bigint' ? Number(val) : Number(val);
+      if (isNaN(num)) return sum;
+      return sum + num;
+    }
+    return sum;
+  }, 0);
+  const teamStorage = teamStorageBytes / (1024 ** 3);
+  const totalTeams = teams.length;
 
   // The rest of SharePoint storage is for standalone sites
   // For legacy/other metrics, keep MB for getStandaloneSharePointStorage, but use GB for display
@@ -139,21 +174,32 @@ export default function DashboardPage() {
   const uniqueSkus = new Set(licenses.map((l: any) => l.skuPartNumber)).size;
   const totalAssignedLicenses = getTotalAssignedLicenses(licenses);
 
-  // Chart data for collaboration distribution (ensure M365 Groups is included)
+  // Chart data for collaboration distribution (standalone SharePoint, unique Groups, Teams)
   const collabEntityChart: ChartDataItem[] = [
     { name: 'M365 Groups', value: totalGroups },
     { name: 'Microsoft Teams', value: totalTeams },
     { name: 'SharePoint Sites', value: totalSharePointSites },
   ];
 
-  // Collaboration storage chart: always show in GB, 4 decimals
-  const groupStorageGB = groupStorage;
-  const teamStorageGB = teamStorage;
-  const sharePointStorageGB = totalSharePointStorageGB;
+  // Collaboration storage chart: split SharePoint usage by rootWebTemplate
+  let groupConnectedBytes = 0;
+  let standaloneBytes = 0;
+  for (const row of sharePointUsage) {
+    const val = row.storageUsedBytes;
+    if (val === undefined || val === null || val === '') continue;
+    const num = typeof val === 'bigint' ? Number(val) : Number(val);
+    if (isNaN(num)) continue;
+    if (row.rootWebTemplate === 'Group') {
+      groupConnectedBytes += num;
+    } else {
+      standaloneBytes += num;
+    }
+  }
+  const groupConnectedGB = groupConnectedBytes / (1024 ** 3);
+  const standaloneGB = standaloneBytes / (1024 ** 3);
   const collabStorageChart: ChartDataItem[] = [
-    { name: 'M365 Groups', value: Number(groupStorageGB.toFixed(4)) },
-    { name: 'Microsoft Teams', value: Number(teamStorageGB.toFixed(4)) },
-    { name: 'SharePoint Sites', value: Number(sharePointStorageGB.toFixed(4)) },
+    { name: 'Group/Teams Connected Sites', value: Number(groupConnectedGB.toFixed(4)) },
+    { name: 'SharePoint Sites', value: Number(standaloneGB.toFixed(4)) },
   ];
   const storageUnit = 'GB';
 
@@ -232,7 +278,7 @@ export default function DashboardPage() {
               <Typography variant="h6" gutterBottom>M365 Groups</Typography>
             </Box>
             <Typography>Total Groups: {totalGroups}</Typography>
-            <Typography>Total Storage: {groupStorage.toFixed(2)} GB</Typography>
+            <Typography>Total Storage: {groupStorage.toFixed(4)} GB</Typography>
           </Paper>
         </Box>
         {/* Teams */}
@@ -243,7 +289,7 @@ export default function DashboardPage() {
               <Typography variant="h6" gutterBottom>Microsoft Teams</Typography>
             </Box>
             <Typography>Total Teams: {totalTeams}</Typography>
-            <Typography>Total Storage: {teamStorage.toFixed(2)} GB</Typography>
+            <Typography>Total Storage: {teamStorage.toFixed(4)} GB</Typography>
           </Paper>
         </Box>
         {/* Collaboration Distribution Chart */}
