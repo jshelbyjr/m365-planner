@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [securityGroups, setSecurityGroups] = useState<Group[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [sharePointSites, setSharePointSites] = useState<SharePointSite[]>([]);
+  const [sharePointUsage, setSharePointUsage] = useState<any[]>([]);
   const [oneDrives, setOneDrives] = useState<OneDrive[]>([]);
   const [licenses, setLicenses] = useState<any[]>([]);
 
@@ -67,11 +68,18 @@ export default function DashboardPage() {
       .then(data => setTeams(Array.isArray(data) ? data : []))
       .catch(() => setTeams([]));
 
-    // SharePoint Sites
+
+    // SharePoint Sites (legacy, still used for some metrics)
     fetch('/api/data/sharepoint')
       .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch sharepoint'))
       .then(data => setSharePointSites(Array.isArray(data) ? data : []))
       .catch(() => setSharePointSites([]));
+
+    // SharePoint Usage (for totals)
+    fetch('/api/data/sharepoint-usage')
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch sharepoint usage'))
+      .then(data => setSharePointUsage(Array.isArray(data) ? data : []))
+      .catch(() => setSharePointUsage([]));
 
     // OneDrive
     fetch('/api/data/onedrive')
@@ -103,8 +111,18 @@ export default function DashboardPage() {
   const totalOneDrives = getTotal(oneDrives);
   const totalOneDriveStorage = getTotalStorage(oneDrives, 'size');
 
-  const totalSharePointSites = getTotal(sharePointSites);
-  const totalSharePointStorage = getTotalStorage(sharePointSites, 'storageUsed');
+
+  // Use SharePoint Usage table for totals
+  const totalSharePointSites = sharePointUsage.length;
+  // Sum in bytes, then convert to GB for display
+  const totalSharePointStorageBytes = sharePointUsage.reduce((sum, row) => {
+    const val = row.storageUsedBytes;
+    if (val === undefined || val === null || val === '') return sum;
+    const num = typeof val === 'bigint' ? Number(val) : Number(val);
+    if (isNaN(num)) return sum;
+    return sum + num;
+  }, 0);
+  const totalSharePointStorageGB = totalSharePointStorageBytes / (1024 ** 3);
 
   const totalGroups = getTotal(m365Groups);
   // For group and team storage, assume SharePoint site is associated by index (or add logic if available)
@@ -114,7 +132,8 @@ export default function DashboardPage() {
   const teamStorage = getSharePointStorageForEntities(sharePointSites, totalGroups, totalGroups + totalTeams);
 
   // The rest of SharePoint storage is for standalone sites
-  const standaloneSharePointStorage = getStandaloneSharePointStorage(totalSharePointStorage, groupStorage, teamStorage);
+  // For legacy/other metrics, keep MB for getStandaloneSharePointStorage, but use GB for display
+  const standaloneSharePointStorage = getStandaloneSharePointStorage(totalSharePointStorageBytes / (1024 * 1024), groupStorage, teamStorage);
 
   // Licenses: unique SKUs and total assigned
   const uniqueSkus = new Set(licenses.map((l: any) => l.skuPartNumber)).size;
@@ -127,25 +146,16 @@ export default function DashboardPage() {
     { name: 'SharePoint Sites', value: totalSharePointSites },
   ];
 
-  // Storage auto-scaling (TB, GB, MB)
-  const groupStorageRaw = groupStorage * 1024 ** 3; // bytes
-  const teamStorageRaw = teamStorage * 1024 ** 3; // bytes
-  const sharePointStorageRaw = standaloneSharePointStorage * 1024 ** 3; // bytes
-  const maxStorage = Math.max(groupStorageRaw, teamStorageRaw, sharePointStorageRaw);
-  let storageUnit = 'GB';
-  let divisor = 1024 ** 3;
-  if (maxStorage >= 1024 ** 4) {
-    storageUnit = 'TB';
-    divisor = 1024 ** 4;
-  } else if (maxStorage < 1024 ** 3 && maxStorage >= 1024 ** 2) {
-    storageUnit = 'MB';
-    divisor = 1024 ** 2;
-  }
+  // Collaboration storage chart: always show in GB, 4 decimals
+  const groupStorageGB = groupStorage;
+  const teamStorageGB = teamStorage;
+  const sharePointStorageGB = totalSharePointStorageGB;
   const collabStorageChart: ChartDataItem[] = [
-    { name: 'M365 Groups', value: Number((groupStorageRaw / divisor).toFixed(2)) },
-    { name: 'Microsoft Teams', value: Number((teamStorageRaw / divisor).toFixed(2)) },
-    { name: 'SharePoint Sites', value: Number((sharePointStorageRaw / divisor).toFixed(2)) },
+    { name: 'M365 Groups', value: Number(groupStorageGB.toFixed(4)) },
+    { name: 'Microsoft Teams', value: Number(teamStorageGB.toFixed(4)) },
+    { name: 'SharePoint Sites', value: Number(sharePointStorageGB.toFixed(4)) },
   ];
+  const storageUnit = 'GB';
 
 
   // Layout: Tenant (Domains, Licenses, Users), Collaboration (SharePoint, OneDrive, M365 Groups, Teams, 2 chart cards)
@@ -200,7 +210,7 @@ export default function DashboardPage() {
               <Typography variant="h6" gutterBottom>SharePoint</Typography>
             </Box>
             <Typography>Total Sites: {totalSharePointSites}</Typography>
-            <Typography>Total Storage: {totalSharePointStorage.toFixed(2)} GB</Typography>
+            <Typography>Total Storage: {totalSharePointStorageGB.toFixed(4)} GB</Typography>
           </Paper>
         </Box>
         {/* OneDrive */}
