@@ -31,3 +31,35 @@ export async function getAuthenticatedClient() {
 
   return client;
 }
+
+/**
+ * Fetch all members of a group from Microsoft Graph, handling paging.
+ * @param groupId - The group (or team) ID
+ */
+export async function getGroupMembers(groupId: string) {
+  const client = await getAuthenticatedClient();
+  let members: any[] = [];
+  let url = `/groups/${groupId}/members?$top=999`;
+  while (url) {
+    const response = await client.api(url).get();
+    if (response.value) members = members.concat(response.value);
+    url = response['@odata.nextLink'] ? response['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0', '') : null;
+  }
+  return members;
+}
+
+/**
+ * Fetch all owners of a group from Microsoft Graph, handling paging.
+ * @param groupId - The group (or team) ID
+ */
+export async function getGroupOwners(groupId: string) {
+  const client = await getAuthenticatedClient();
+  let owners: any[] = [];
+  let url = `/groups/${groupId}/owners?$top=999`;
+  while (url) {
+    const response = await client.api(url).get();
+    if (response.value) owners = owners.concat(response.value);
+    url = response['@odata.nextLink'] ? response['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0', '') : null;
+  }
+  return owners;
+}

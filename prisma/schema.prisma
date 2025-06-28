@@ -1,8 +1,18 @@
+// Model for Microsoft Teams
+model Team {
+  id          String  @id @unique // Graph ID
+  displayName String?
+  description String?
+  visibility  String?
+  owners      User[]   @relation("TeamOwners")
+  members     User[]   @relation("TeamMembers")
+}
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
@@ -13,7 +23,7 @@ datasource db {
 
 // Model for storing the M365 App Registration configuration
 model Configuration {
-  id           Int     @id @default(1) // Only ever one row
+  id           Int      @id @default(1) // Only ever one row
   tenantId     String
   clientId     String
   clientSecret String
@@ -22,12 +32,11 @@ model Configuration {
   updatedAt    DateTime @updatedAt
 }
 
-
 // Model to track the status and times of data collection scans per data type
 model ScanLog {
-  id          Int      @id @default(autoincrement())
-  dataType    String  // e.g., "users", "groups"
-  status      String  // e.g., "IDLE", "IN_PROGRESS", "COMPLETED", "FAILED"
+  id          Int       @id @default(autoincrement())
+  dataType    String // e.g., "users", "groups"
+  status      String // e.g., "IDLE", "IN_PROGRESS", "COMPLETED", "FAILED"
   startedAt   DateTime?
   completedAt DateTime?
   error       String?
@@ -35,21 +44,27 @@ model ScanLog {
 
 // Model for M365 Users
 model User {
-  id                String  @id @unique // Graph ID
+  id                String   @id @unique // Graph ID
   displayName       String?
   userPrincipalName String?
   accountEnabled    Boolean?
   department        String?
   jobTitle          String?
+  ownerOfGroups     M365Group[] @relation("GroupOwners")
+  memberOfGroups    M365Group[] @relation("GroupMembers")
+  ownerOfTeams      Team[]      @relation("TeamOwners")
+  memberOfTeams     Team[]      @relation("TeamMembers")
 }
 
 // Model for M365 Groups (formerly Office 365 Groups)
 model M365Group {
-  id            String  @id @unique // Graph ID
-  displayName   String?
-  mailNickname  String?
-  memberCount   Int?
-  visibility    String? // Public or Private
+  id           String   @id @unique // Graph ID
+  displayName  String?
+  mailNickname String?
+  memberCount  Int?
+  visibility   String? // Public or Private
+  owners       User[]   @relation("GroupOwners")
+  members      User[]   @relation("GroupMembers")
 }
 
 // Model for Security and Distribution Groups

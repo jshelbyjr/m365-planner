@@ -1,5 +1,5 @@
 // file: app/api/scan/route.ts
-import type { M365Group, SecurityGroup } from '@prisma/client';
+// import type { M365Group, SecurityGroup } from '@prisma/client';
 import { prisma } from '@/app/lib/prisma';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedClient } from '@/app/lib/graph.service';
@@ -60,8 +60,80 @@ function getScanHandlers() {
   return {
     users: handleUsersScan,
     groups: handleGroupsScan,
+    teams: handleTeamsScan,
     // Add more types here as needed
   };
+// Handler for teams scan
+async function handleTeamsScan() {
+  const client = await getAuthenticatedClient();
+  const { getGroupOwners, getGroupMembers } = await import('@/app/lib/graph.service');
+  // Clear old teams
+  await prisma.team.deleteMany({});
+  // Fetch Teams (filter groups with resourceProvisioningOptions/Any(x:x eq 'Team'))
+  let teamsResponse = await client.api('/groups')
+    .filter("resourceProvisioningOptions/Any(x:x eq 'Team')")
+    .select('id,displayName,description,visibility,resourceProvisioningOptions')
+    .get();
+  const allUsers: Record<string, any> = {};
+  const teams: any[] = [];
+  const processTeams = async (groups: Group[]) => {
+    for (const group of groups) {
+      // Fetch all owners and members for this team using utility functions
+      const [owners, members] = await Promise.all([
+        getGroupOwners(group.id!),
+        getGroupMembers(group.id!)
+      ]);
+      const ownerIds = owners.map((u: any) => u.id).filter(Boolean);
+      const memberIds = members.map((u: any) => u.id).filter(Boolean);
+      // Track all users for later upsert
+      for (const u of [...owners, ...members]) {
+        if (u && u.id) allUsers[u.id] = u;
+      }
+      teams.push({
+        id: group.id!,
+        displayName: group.displayName ?? null,
+        description: group.description ?? null,
+        visibility: group.visibility ?? null,
+        ownerIds,
+        memberIds
+      });
+    }
+  };
+  await processTeams(teamsResponse.value);
+  while(teamsResponse['@odata.nextLink']) {
+    teamsResponse = await client.api(teamsResponse['@odata.nextLink']).get();
+    await processTeams(teamsResponse.value);
+  }
+  // Upsert all users found as owners/members
+  const userUpserts = Object.values(allUsers).map((u: any) =>
+    prisma.user.upsert({
+      where: { id: u.id },
+      update: {},
+      create: {
+        id: u.id,
+        displayName: u.displayName,
+        userPrincipalName: u.userPrincipalName,
+        accountEnabled: u.accountEnabled,
+        department: u.department,
+        jobTitle: u.jobTitle,
+      }
+    })
+  );
+  await Promise.all(userUpserts);
+  // Create Teams and connect owners/members
+  for (const t of teams) {
+    await prisma.team.create({
+      data: {
+        id: t.id,
+        displayName: t.displayName,
+        description: t.description,
+        visibility: t.visibility,
+        owners: { connect: t.ownerIds.map((id: string) => ({ id })) },
+        members: { connect: t.memberIds.map((id: string) => ({ id })) },
+      }
+    });
+  }
+}
 }
 
 // Main scan runner, dispatches to the correct handler
@@ -119,22 +191,41 @@ async function handleUsersScan() {
 // Handler for groups scan
 async function handleGroupsScan() {
   const client = await getAuthenticatedClient();
+  const { getGroupOwners, getGroupMembers } = await import('@/app/lib/graph.service');
   // Clear old groups
   await prisma.m365Group.deleteMany({});
   await prisma.securityGroup.deleteMany({});
-  // Fetch Groups
-  const m365Groups: M365Group[] = [];
-  const securityGroups: SecurityGroup[] = [];
-  let groupsResponse = await client.api('/groups').select('id,displayName,groupTypes,mailNickname,securityEnabled,visibility').get();
-  const processGroups = (groups: Group[]) => {
+  // Fetch Groups (Unified, but NOT Teams)
+  let groupsResponse = await client.api('/groups')
+    .filter("groupTypes/any(c:c eq 'Unified') and not(resourceProvisioningOptions/Any(x:x eq 'Team'))")
+    .header('ConsistencyLevel', 'eventual')
+    .select('id,displayName,groupTypes,mailNickname,securityEnabled,visibility')
+    .get();
+  const m365Groups: any[] = [];
+  const securityGroups: any[] = [];
+  const allUsers: Record<string, any> = {};
+  const processGroups = async (groups: Group[]) => {
     for (const group of groups) {
       if (group.groupTypes?.includes('Unified')) {
+        // Fetch all owners and members for this group using utility functions
+        const [owners, members] = await Promise.all([
+          getGroupOwners(group.id!),
+          getGroupMembers(group.id!)
+        ]);
+        const ownerIds = owners.map((u: any) => u.id).filter(Boolean);
+        const memberIds = members.map((u: any) => u.id).filter(Boolean);
+        // Track all users for later upsert
+        for (const u of [...owners, ...members]) {
+          if (u && u.id) allUsers[u.id] = u;
+        }
         m365Groups.push({
           id: group.id!,
           displayName: group.displayName ?? null,
           mailNickname: group.mailNickname ?? null,
           visibility: group.visibility ?? null,
-          memberCount: null
+          memberCount: memberIds.length,
+          ownerIds,
+          memberIds
         });
       } else if (group.securityEnabled) {
         securityGroups.push({
@@ -146,11 +237,40 @@ async function handleGroupsScan() {
       }
     }
   };
-  processGroups(groupsResponse.value);
+  await processGroups(groupsResponse.value);
   while(groupsResponse['@odata.nextLink']) {
     groupsResponse = await client.api(groupsResponse['@odata.nextLink']).get();
-    processGroups(groupsResponse.value);
+    await processGroups(groupsResponse.value);
   }
-  await prisma.m365Group.createMany({ data: m365Groups });
+  // Upsert all users found as owners/members
+  const userUpserts = Object.values(allUsers).map((u: any) =>
+    prisma.user.upsert({
+      where: { id: u.id },
+      update: {},
+      create: {
+        id: u.id,
+        displayName: u.displayName,
+        userPrincipalName: u.userPrincipalName,
+        accountEnabled: u.accountEnabled,
+        department: u.department,
+        jobTitle: u.jobTitle,
+      }
+    })
+  );
+  await Promise.all(userUpserts);
+  // Create M365 groups and connect owners/members
+  for (const g of m365Groups) {
+    await prisma.m365Group.create({
+      data: {
+        id: g.id,
+        displayName: g.displayName,
+        mailNickname: g.mailNickname,
+        visibility: g.visibility,
+        memberCount: g.memberCount,
+        owners: { connect: g.ownerIds.map((id: string) => ({ id })) },
+        members: { connect: g.memberIds.map((id: string) => ({ id })) },
+      }
+    });
+  }
   await prisma.securityGroup.createMany({ data: securityGroups });
 }

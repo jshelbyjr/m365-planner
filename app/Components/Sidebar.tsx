@@ -22,7 +22,7 @@ const navSections = [
       { label: 'OneDrive', href: '#' },
       { label: 'SharePoint Sites', href: '#' },
       { label: 'M365 Groups', href: '/Dashboard/Groups' },
-      { label: 'Microsoft Teams', href: '#' },
+      { label: 'Microsoft Teams', href: '/Dashboard/Teams' },
     ],
   },
 ];

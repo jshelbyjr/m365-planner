@@ -1,33 +1,41 @@
-// Users DataTable Page
+// file: app/Dashboard/Teams/page.tsx
 'use client';
+
 import { useEffect, useState } from 'react';
+import { Typography, CircularProgress } from '@mui/material';
 import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
 
-type User = {
+interface Team {
   id: string;
   displayName: string;
-  userPrincipalName: string;
-  accountEnabled: boolean;
-  department?: string;
-  jobTitle?: string;
-};
+  description?: string;
+  visibility?: string;
+}
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
+export default function TeamsDetailPage() {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
 
+  // Fetch Teams
   useEffect(() => {
-    const fetchUsers = async () => {
-      const res = await fetch('/api/data/users');
-      if (res.ok) setUsers(await res.json());
+    const fetchTeams = async () => {
+      try {
+        const res = await fetch('/api/data/teams');
+        if (res.ok) {
+          const data = await res.json();
+          setTeams(data.teams || []);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchUsers();
+    fetchTeams();
   }, []);
 
-  // Fetch latest scan status for users
-
+  // Fetch scan status for teams
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
@@ -35,10 +43,13 @@ export default function UsersPage() {
       if (res.ok) {
         const status = await res.json();
         setScanStatus(status);
-        // If scan just completed, refresh users
+        // If scan just completed, refresh teams
         if (status.status === 'COMPLETED') {
-          const usersRes = await fetch('/api/data/users');
-          if (usersRes.ok) setUsers(await usersRes.json());
+          const teamsRes = await fetch('/api/data/teams');
+          if (teamsRes.ok) {
+            const data = await teamsRes.json();
+            setTeams(data.teams || []);
+          }
         }
       }
     };
@@ -54,12 +65,15 @@ export default function UsersPage() {
     const res = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataType: 'users' })
+      body: JSON.stringify({ dataType: 'teams' })
     });
     if (res.ok) {
-      // Optionally refetch users after scan
-      const usersRes = await fetch('/api/data/users');
-      if (usersRes.ok) setUsers(await usersRes.json());
+      // Optionally refetch teams after scan
+      const teamsRes = await fetch('/api/data/teams');
+      if (teamsRes.ok) {
+        const data = await teamsRes.json();
+        setTeams(data.teams || []);
+      }
       // Refetch scan status
       const statusRes = await fetch('/api/scan');
       if (statusRes.ok) setScanStatus(await statusRes.json());
@@ -71,33 +85,32 @@ export default function UsersPage() {
   // Define columns to display in the DataTable
   const columns = [
     { key: 'displayName', label: 'Display Name' },
-    { key: 'userPrincipalName', label: 'User Principal Name' },
-    { key: 'accountEnabled', label: 'Account Enabled' },
-    { key: 'department', label: 'Department' },
-    { key: 'jobTitle', label: 'Job Title' },
+    { key: 'description', label: 'Description' },
+    { key: 'visibility', label: 'Visibility' },
+    { key: 'memberCount', label: 'Member Count' },
   ];
 
-  // Handler to fetch all users and export as CSV
-  const handleExportAllUsers = async () => {
-    const res = await fetch('/api/data/users');
+  // Handler to fetch all teams and export as CSV
+  const handleExportAllTeams = async () => {
+    const res = await fetch('/api/data/teams');
     if (res.ok) {
       const data = await res.json();
-      // Some APIs may return { users: [...] }, others may return differently
-      return data.users || data;
+      // Some APIs return { teams: [...] }, others may return differently
+      return data.teams || data;
     }
     return [];
   };
 
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-bold mb-4 flex items-center">Users
+      <h1 className="text-2xl font-bold mb-4 flex items-center">Microsoft Teams
         <ExportCSVButton
-          data={users}
+          data={teams}
           columns={columns}
-          fileName="users.csv"
+          fileName="teams.csv"
           // Fetch all data on export
           // @ts-ignore
-          fetchAllData={handleExportAllUsers}
+          fetchAllData={handleExportAllTeams}
         />
       </h1>
       <div className="mb-6">
@@ -116,12 +129,16 @@ export default function UsersPage() {
           )}
         />
       </div>
-      <DataTable
-        title={`Users (${users.length})`}
-        data={users}
-        displayKey="userPrincipalName"
-        columns={columns}
-      />
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <DataTable
+          title={`Teams (${teams.length})`}
+          data={teams}
+          displayKey="displayName"
+          columns={columns}
+        />
+      )}
     </main>
   );
 }

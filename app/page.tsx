@@ -9,14 +9,16 @@ import TotalsCards from './Components/TotalsCards';
 
 type User = { id: string; displayName: string; userPrincipalName: string; accountEnabled: boolean };
 type Group = { id: string; displayName: string };
+type Team = { id: string; displayName: string; description?: string; visibility?: string };
 
 export default function DashboardPage() {
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [m365Groups, setM365Groups] = useState<Group[]>([]);
   const [securityGroups, setSecurityGroups] = useState<Group[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
 
-  // Fetch users and groups on mount
+  // Fetch users, groups, and teams on mount
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -24,24 +26,29 @@ export default function DashboardPage() {
         if (res.ok) {
           setUsers(await res.json());
         }
-      } catch (e) {
-        // Optionally handle error
-      }
+      } catch (e) {}
     };
     const fetchGroups = async () => {
       try {
         const res = await fetch('/api/data/groups');
         if (res.ok) {
-        const data = await res.json();
-        setM365Groups(data.m365Groups || []);
+          const data = await res.json();
+          setM365Groups(data.m365Groups || []);
         }
-      } catch (e) {
-        // Optionally handle error
-      }
+      } catch (e) {}
+    };
+    const fetchTeams = async () => {
+      try {
+        const res = await fetch('/api/data/teams');
+        if (res.ok) {
+          const data = await res.json();
+          setTeams(data.teams || []);
+        }
+      } catch (e) {}
     };
     fetchUsers();
     fetchGroups();
-    // Add more fetches here for future cards/routes
+    fetchTeams();
   }, []);
 
 
@@ -52,8 +59,7 @@ export default function DashboardPage() {
           cards={[
             { label: 'Total Users', count: users.length },
             { label: 'Total M365 Groups', count: m365Groups.length },
-            // Add more cards here as needed, e.g.:
-            // { label: 'Total Security Groups', count: securityGroups.length },
+            { label: 'Total Teams', count: teams.length },
           ]}
         />
         {/* DataTables moved to their own pages */}

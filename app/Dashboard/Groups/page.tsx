@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
+import ExportCSVButton from '../../Components/ExportCSVButton';
 
 type Group = {
   id: string;
@@ -82,9 +83,29 @@ export default function GroupsPage() {
     { key: 'visibility', label: 'Visibility' },
   ];
 
+  // Handler to fetch all groups and export as CSV
+  const handleExportAllGroups = async () => {
+    const res = await fetch('/api/data/groups');
+    if (res.ok) {
+      const data = await res.json();
+      // API returns { m365Groups: [...] }
+      return data.m365Groups || data;
+    }
+    return [];
+  };
+
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-bold mb-4">M365 Groups</h1>
+      <h1 className="text-2xl font-bold mb-4 flex items-center">M365 Groups
+        <ExportCSVButton
+          data={groups}
+          columns={columns}
+          fileName="groups.csv"
+          // Fetch all data on export
+          // @ts-ignore
+          fetchAllData={handleExportAllGroups}
+        />
+      </h1>
       <div className="mb-6">
         <DataCollectionCard
           scanStatus={scanStatus}
