@@ -63,8 +63,37 @@ function getScanHandlers() {
     teams: handleTeamsScan,
     sharepoint: handleSharePointScan,
     onedrive: handleOneDriveScan,
+    licenses: handleLicensesScan,
     // Add more types here as needed
   };
+}
+
+// Handler for Licenses scan
+async function handleLicensesScan() {
+  const client = await getAuthenticatedClient();
+  // Clear old licenses
+  await prisma.license.deleteMany({});
+  // Fetch licenses (subscribed SKUs)
+  let licensesResponse = await client.api('/subscribedSkus').get();
+  const licenses = licensesResponse.value || [];
+  for (const license of licenses) {
+    await prisma.license.create({
+      data: {
+        id: license.skuId,
+        skuPartNumber: license.skuPartNumber,
+        displayName: license.skuPartNumber, // Graph API may not provide displayName
+        status: license.capabilityStatus,
+        totalSeats: license.prepaidUnits?.enabled ?? null,
+        consumedSeats: license.consumedUnits ?? null,
+        availableSeats: license.prepaidUnits?.enabled && license.consumedUnits !== undefined ? license.prepaidUnits.enabled - license.consumedUnits : null,
+        prepaidUnits: license.prepaidUnits?.enabled ?? null,
+        warningUnits: license.prepaidUnits?.warning ?? null,
+        suspendedUnits: license.prepaidUnits?.suspended ?? null,
+        assignedUnits: license.prepaidUnits?.assigned ?? null,
+      }
+    });
+  }
+}
 // Handler for OneDrive scan
 async function handleOneDriveScan() {
   const { getAllUsersOneDriveInfo } = await import('@/app/lib/graph.service');
@@ -194,7 +223,6 @@ async function handleSharePointScan() {
       }
     });
   }
-}
 }
 
 // Main scan runner, dispatches to the correct handler

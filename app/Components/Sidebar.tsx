@@ -5,7 +5,7 @@ const navSections = [
     header: 'Tenant',
     items: [
       { label: 'Tenant Info', href: '#' },
-      { label: 'Licenses', href: '#' },
+      { label: 'Licenses', href: '/Dashboard/Licenses' },
       { label: 'Users', href: '/Dashboard/Users' },
     ],
   },

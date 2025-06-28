@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [sharePointSites, setSharePointSites] = useState<SharePointSite[]>([]);
   const [oneDrives, setOneDrives] = useState<OneDrive[]>([]);
+  const [licenses, setLicenses] = useState<any[]>([]);
 
   // Fetch users, groups, and teams on mount
   useEffect(() => {
@@ -49,14 +50,10 @@ export default function DashboardPage() {
         const res = await fetch('/api/data/teams');
         if (res.ok) {
           const data = await res.json();
-          // Handle both array and object response shapes
           setTeams(Array.isArray(data) ? data : data.teams || []);
         }
       } catch (e) {}
     };
-    fetchUsers();
-    fetchGroups();
-    fetchTeams();
     const fetchSharePointSites = async () => {
       try {
         const res = await fetch('/api/data/sharepoint');
@@ -65,7 +62,6 @@ export default function DashboardPage() {
         }
       } catch (e) {}
     };
-    fetchSharePointSites();
     const fetchOneDrives = async () => {
       try {
         const res = await fetch('/api/data/onedrive');
@@ -74,7 +70,20 @@ export default function DashboardPage() {
         }
       } catch (e) {}
     };
+    const fetchLicenses = async () => {
+      try {
+        const res = await fetch('/api/data/licenses');
+        if (res.ok) {
+          setLicenses(await res.json());
+        }
+      } catch (e) {}
+    };
+    fetchUsers();
+    fetchGroups();
+    fetchTeams();
+    fetchSharePointSites();
     fetchOneDrives();
+    fetchLicenses();
   }, []);
 
 
@@ -88,6 +97,7 @@ export default function DashboardPage() {
             { label: 'Total Teams', count: teams.length },
             { label: 'Total SharePoint Sites', count: sharePointSites.length },
             { label: 'Total OneDrive Accounts', count: oneDrives.length },
+            { label: 'Total Licenses', count: licenses.length },
           ]}
         />
         {/* DataTables moved to their own pages */}

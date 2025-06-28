@@ -110,3 +110,22 @@ model OneDrive {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+
+// Model for Microsoft 365 Licenses (Subscribed SKUs)
+model License {
+  id             String   @id @unique // SKU ID from Graph
+  skuPartNumber  String   // e.g., "ENTERPRISEPACK"
+  displayName    String?
+  status         String?  // e.g., "Enabled"
+  totalSeats     Int?
+  consumedSeats  Int?
+  availableSeats Int?
+  prepaidUnits   Int?
+  warningUnits   Int?
+  suspendedUnits Int?
+  assignedUnits  Int?
+  // Optionally, add createdAt/updatedAt for tracking
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
