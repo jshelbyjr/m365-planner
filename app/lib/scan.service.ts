@@ -178,8 +178,9 @@ export async function scanSharePoint() {
         }
         try {
           const storage = await client.api(`/sites/${site.id}/drive`).get();
-          storageUsed = storage?.quota?.used ? storage.quota.used / (1024 * 1024) : null;
-          storageLimit = storage?.quota?.total ? storage.quota.total / (1024 * 1024) : null;
+          // Convert bytes to GB and format to 4 decimal places
+          storageUsed = storage?.quota?.used ? Number((storage.quota.used / (1024 * 1024 * 1024)).toFixed(4)) : null;
+          storageLimit = storage?.quota?.total ? Number((storage.quota.total / (1024 * 1024 * 1024)).toFixed(4)) : null;
         } catch {}
         try {
           const children = await client.api(`/sites/${site.id}/drive/root/children?$top=1&$count=true`).header('ConsistencyLevel', 'eventual').get();

@@ -83,7 +83,7 @@ export default function SharePointUsagePage() {
         if (val === undefined || val === null || val === '') return '';
         const num = typeof val === 'bigint' ? Number(val) : Number(val);
         if (isNaN(num)) return '';
-        return (num / (1024 ** 3)).toFixed(2);
+        return (num / (1024 ** 3)).toFixed(4);
       },
     },
     {
@@ -94,7 +94,7 @@ export default function SharePointUsagePage() {
         if (val === undefined || val === null || val === '') return '';
         const num = typeof val === 'bigint' ? Number(val) : Number(val);
         if (isNaN(num)) return '';
-        return (num / (1024 ** 3)).toFixed(2);
+        return (num / (1024 ** 3)).toFixed(4);
       },
     },
     { key: 'rootWebTemplate', label: 'Root Web Template' },
@@ -111,11 +111,24 @@ export default function SharePointUsagePage() {
     return [];
   };
 
+  // Preprocess usage data to convert storage values from bytes to GB
+  const usageWithGB = (usage || []).map((row) => ({
+    ...row,
+    storageUsedBytes:
+      row.storageUsedBytes && !isNaN(Number(row.storageUsedBytes))
+        ? (Number(row.storageUsedBytes) / (1024 ** 3)).toFixed(4)
+        : '',
+    storageAllocatedBytes:
+      row.storageAllocatedBytes && !isNaN(Number(row.storageAllocatedBytes))
+        ? (Number(row.storageAllocatedBytes) / (1024 ** 3)).toFixed(4)
+        : '',
+  }));
+
   return (
     <main className="p-8">
       <h1 className="text-2xl font-bold mb-4 flex items-center">SharePoint Site Usage
         <ExportCSVButton
-          data={usage || []}
+          data={usageWithGB}
           columns={columns}
           fileName="sharepoint-site-usage.csv"
           // @ts-ignore
@@ -142,8 +155,8 @@ export default function SharePointUsagePage() {
         />
       </div>
       <DataTable
-        title={`SharePoint Site Usage (${usage ? usage.length : 0})`}
-        data={usage || []}
+        title={`SharePoint Site Usage (${usageWithGB.length})`}
+        data={usageWithGB}
         displayKey="siteName"
         columns={columns}
         loading={loading}
