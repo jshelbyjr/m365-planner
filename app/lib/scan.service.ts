@@ -1,89 +1,3 @@
-/**
- * Handler for SharePoint Site Usage scan
- */
-export async function scanSharePointUsage() {
-  const client = await getAuthenticatedClient();
-  await prisma.sharePointSiteUsageDetail.deleteMany({});
-  try {
-    // Microsoft Graph API: /reports/getSharePointSiteUsageDetail(period='D180')
-    const responseStream = await client.api("/reports/getSharePointSiteUsageDetail(period='D180')").getStream();
-    const csv = await streamToString(responseStream);
-    const parse = (await import('csv-parse/sync')).parse;
-    const records = parse(csv, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-    });
-    if (!records.length) {
-      console.warn('[SharePointUsage] No data lines found in CSV');
-      return;
-    }
-    const headers = Object.keys(records[0]);
-    console.log('[SharePointUsage] CSV Headers:', headers);
-    console.log('[SharePointUsage] First data row:', records[0]);
-    console.log(`[SharePointUsage] Parsed ${records.length} records`);
-    // Map and insert records
-    for (const rec of records) {
-      try {
-        // Helper to get value by possible header variants
-        const get = (...keys: string[]) => {
-          for (const k of keys) {
-            const norm = k.toLowerCase().replace(/\s+/g, '');
-            for (const h of headers) {
-              if (h.toLowerCase().replace(/\s+/g, '') === norm) {
-                return rec[h];
-              }
-            }
-          }
-          return null;
-        };
-        const idVal = get('Site Id') || '';
-        const siteIdVal = get('Site Id') || null;
-        const siteUrlVal = get('Site URL') || null;
-        const ownerDisplayNameVal = get('Owner Display Name') || null;
-        const isDeletedVal = get('Is Deleted');
-        const lastActivityDateVal = get('Last Activity Date');
-        const fileCountVal = get('File Count');
-        const activeFileCountVal = get('Active File Count');
-        const pageViewCountVal = get('Page View Count');
-        const visitedPageCountVal = get('Visited Page Count');
-        const storageUsedBytesVal = get('Storage Used (Byte)');
-        const storageAllocatedBytesVal = get('Storage Allocated (Byte)');
-        const rootWebTemplateVal = get('Root Web Template');
-        const ownerPrincipalNameVal = get('Owner Principal Name');
-        const reportPeriodVal = get('Report Period') || null;
-        const reportRefreshDateVal = get('Report Refresh Date');
-        const siteNameVal = get('Site Name') || null;
-        await prisma.sharePointSiteUsageDetail.create({
-          data: {
-            id: idVal,
-            siteId: siteIdVal,
-            siteUrl: siteUrlVal,
-            ownerDisplayName: ownerDisplayNameVal,
-            isDeleted: typeof isDeletedVal === 'string' ? isDeletedVal.toLowerCase() === 'true' : null,
-            lastActivityDate: typeof lastActivityDateVal === 'string' && lastActivityDateVal ? new Date(lastActivityDateVal) : null,
-            fileCount: typeof fileCountVal === 'string' && fileCountVal ? parseInt(fileCountVal, 10) : null,
-            activeFileCount: typeof activeFileCountVal === 'string' && activeFileCountVal ? parseInt(activeFileCountVal, 10) : null,
-            pageViewCount: typeof pageViewCountVal === 'string' && pageViewCountVal ? parseInt(pageViewCountVal, 10) : null,
-            visitedPageCount: typeof visitedPageCountVal === 'string' && visitedPageCountVal ? parseInt(visitedPageCountVal, 10) : null,
-            storageUsedBytes: typeof storageUsedBytesVal === 'string' && storageUsedBytesVal ? BigInt(storageUsedBytesVal) : null,
-            storageAllocatedBytes: typeof storageAllocatedBytesVal === 'string' && storageAllocatedBytesVal ? BigInt(storageAllocatedBytesVal) : null,
-            rootWebTemplate: rootWebTemplateVal,
-            ownerPrincipalName: ownerPrincipalNameVal,
-            reportPeriod: reportPeriodVal,
-            reportRefreshDate: typeof reportRefreshDateVal === 'string' && reportRefreshDateVal ? new Date(reportRefreshDateVal) : null,
-            siteName: siteNameVal,
-          },
-        });
-      } catch (err) {
-        console.error('[SharePointUsage] Error inserting record:', err, rec);
-      }
-    }
-  } catch (err) {
-    console.error('[SharePointUsage] Error in scanSharePointUsage:', err);
-  }
-}
-
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
@@ -412,6 +326,91 @@ export async function scanGroups() {
   });
 }
 
+/**
+ * Handler for SharePoint Site Usage scan
+ */
+export async function scanSharePointUsage() {
+  const client = await getAuthenticatedClient();
+  await prisma.sharePointSiteUsageDetail.deleteMany({});
+  try {
+    // Microsoft Graph API: /reports/getSharePointSiteUsageDetail(period='D180')
+    const responseStream = await client.api("/reports/getSharePointSiteUsageDetail(period='D180')").getStream();
+    const csv = await streamToString(responseStream);
+    const parse = (await import('csv-parse/sync')).parse;
+    const records = parse(csv, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+    if (!records.length) {
+      console.warn('[SharePointUsage] No data lines found in CSV');
+      return;
+    }
+    const headers = Object.keys(records[0]);
+    console.log('[SharePointUsage] CSV Headers:', headers);
+    console.log('[SharePointUsage] First data row:', records[0]);
+    console.log(`[SharePointUsage] Parsed ${records.length} records`);
+    // Map and insert records
+    for (const rec of records) {
+      try {
+        // Helper to get value by possible header variants
+        const get = (...keys: string[]) => {
+          for (const k of keys) {
+            const norm = k.toLowerCase().replace(/\s+/g, '');
+            for (const h of headers) {
+              if (h.toLowerCase().replace(/\s+/g, '') === norm) {
+                return rec[h];
+              }
+            }
+          }
+          return null;
+        };
+        const idVal = get('Site Id') || '';
+        const siteIdVal = get('Site Id') || null;
+        const siteUrlVal = get('Site URL') || null;
+        const ownerDisplayNameVal = get('Owner Display Name') || null;
+        const isDeletedVal = get('Is Deleted');
+        const lastActivityDateVal = get('Last Activity Date');
+        const fileCountVal = get('File Count');
+        const activeFileCountVal = get('Active File Count');
+        const pageViewCountVal = get('Page View Count');
+        const visitedPageCountVal = get('Visited Page Count');
+        const storageUsedBytesVal = get('Storage Used (Byte)');
+        const storageAllocatedBytesVal = get('Storage Allocated (Byte)');
+        const rootWebTemplateVal = get('Root Web Template');
+        const ownerPrincipalNameVal = get('Owner Principal Name');
+        const reportPeriodVal = get('Report Period') || null;
+        const reportRefreshDateVal = get('Report Refresh Date');
+        const siteNameVal = get('Site Name') || null;
+        await prisma.sharePointSiteUsageDetail.create({
+          data: {
+            id: idVal,
+            siteId: siteIdVal,
+            siteUrl: siteUrlVal,
+            ownerDisplayName: ownerDisplayNameVal,
+            isDeleted: typeof isDeletedVal === 'string' ? isDeletedVal.toLowerCase() === 'true' : null,
+            lastActivityDate: typeof lastActivityDateVal === 'string' && lastActivityDateVal ? new Date(lastActivityDateVal) : null,
+            fileCount: typeof fileCountVal === 'string' && fileCountVal ? parseInt(fileCountVal, 10) : null,
+            activeFileCount: typeof activeFileCountVal === 'string' && activeFileCountVal ? parseInt(activeFileCountVal, 10) : null,
+            pageViewCount: typeof pageViewCountVal === 'string' && pageViewCountVal ? parseInt(pageViewCountVal, 10) : null,
+            visitedPageCount: typeof visitedPageCountVal === 'string' && visitedPageCountVal ? parseInt(visitedPageCountVal, 10) : null,
+            storageUsedBytes: typeof storageUsedBytesVal === 'string' && storageUsedBytesVal ? BigInt(storageUsedBytesVal) : null,
+            storageAllocatedBytes: typeof storageAllocatedBytesVal === 'string' && storageAllocatedBytesVal ? BigInt(storageAllocatedBytesVal) : null,
+            rootWebTemplate: rootWebTemplateVal,
+            ownerPrincipalName: ownerPrincipalNameVal,
+            reportPeriod: reportPeriodVal,
+            reportRefreshDate: typeof reportRefreshDateVal === 'string' && reportRefreshDateVal ? new Date(reportRefreshDateVal) : null,
+            siteName: siteNameVal,
+          },
+        });
+      } catch (err) {
+        console.error('[SharePointUsage] Error inserting record:', err, rec);
+      }
+    }
+  } catch (err) {
+    console.error('[SharePointUsage] Error in scanSharePointUsage:', err);
+  }
+}
 
 
 /**
