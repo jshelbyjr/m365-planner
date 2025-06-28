@@ -97,3 +97,16 @@ model SharePointSite {
   sensitivity       String?
   externalSharing   String?
 }
+
+// Model for OneDrive
+model OneDrive {
+  id         String   @id @unique // Drive ID
+  ownerId    String? // User/Owner Graph ID
+  ownerName  String?
+  siteName   String?
+  siteUrl    String?
+  size       Float?
+  // Optionally, add createdAt/updatedAt for tracking
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

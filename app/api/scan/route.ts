@@ -62,8 +62,24 @@ function getScanHandlers() {
     groups: handleGroupsScan,
     teams: handleTeamsScan,
     sharepoint: handleSharePointScan,
+    onedrive: handleOneDriveScan,
     // Add more types here as needed
   };
+// Handler for OneDrive scan
+async function handleOneDriveScan() {
+  const { getAllUsersOneDriveInfo } = await import('@/app/lib/graph.service');
+  const drives = await getAllUsersOneDriveInfo();
+  // Clear old OneDrive entries
+  await prisma.oneDrive.deleteMany({});
+  // Upsert all drives
+  for (const drive of drives) {
+    await prisma.oneDrive.upsert({
+      where: { id: drive.id },
+      update: drive,
+      create: drive,
+    });
+  }
+}
 // Handler for teams scan
 async function handleTeamsScan() {
   const client = await getAuthenticatedClient();

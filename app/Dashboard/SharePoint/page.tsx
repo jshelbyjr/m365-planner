@@ -99,7 +99,7 @@ export default function SharePointDashboardPage() {
     const res = await fetch('/api/data/sharepoint');
     if (res.ok) {
       const allSites: SharePointSite[] = await res.json();
-      return allSites.filter(site => !site.teams && !site.m365Group);
+      return allSites; // Export all sites, no filter
     }
     return [];
   };

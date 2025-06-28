@@ -13,6 +13,8 @@ type Group = { id: string; displayName: string };
 type Team = { id: string; displayName: string; description?: string; visibility?: string };
 type SharePointSite = { id: string; name?: string; };
 
+type OneDrive = { id: string; ownerId?: string; ownerName?: string; siteName?: string; siteUrl?: string; size?: number };
+
 export default function DashboardPage() {
 
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
@@ -21,6 +23,7 @@ export default function DashboardPage() {
   const [securityGroups, setSecurityGroups] = useState<Group[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [sharePointSites, setSharePointSites] = useState<SharePointSite[]>([]);
+  const [oneDrives, setOneDrives] = useState<OneDrive[]>([]);
 
   // Fetch users, groups, and teams on mount
   useEffect(() => {
@@ -63,6 +66,15 @@ export default function DashboardPage() {
       } catch (e) {}
     };
     fetchSharePointSites();
+    const fetchOneDrives = async () => {
+      try {
+        const res = await fetch('/api/data/onedrive');
+        if (res.ok) {
+          setOneDrives(await res.json());
+        }
+      } catch (e) {}
+    };
+    fetchOneDrives();
   }, []);
 
 
@@ -75,6 +87,7 @@ export default function DashboardPage() {
             { label: 'Total M365 Groups', count: m365Groups.length },
             { label: 'Total Teams', count: teams.length },
             { label: 'Total SharePoint Sites', count: sharePointSites.length },
+            { label: 'Total OneDrive Accounts', count: oneDrives.length },
           ]}
         />
         {/* DataTables moved to their own pages */}

@@ -6,6 +6,42 @@ import 'isomorphic-fetch'; // Required polyfill for the graph client
 
 const prisma = new PrismaClient();
 
+/**
+ * Fetch OneDrive info for all users in the tenant.
+ * Returns: [{ id, ownerId, ownerName, siteName, siteUrl, size }]
+ */
+export async function getAllUsersOneDriveInfo() {
+  const client = await getAuthenticatedClient();
+  // Get all users (could be paged)
+  let users: any[] = [];
+  let url = '/users?$select=id,displayName,userPrincipalName&$top=999';
+  while (url) {
+    const response = await client.api(url).get();
+    if (response.value) users = users.concat(response.value);
+    url = response['@odata.nextLink'] ? response['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0', '') : null;
+  }
+
+  const drives: any[] = [];
+  for (const user of users) {
+    try {
+      // Get the user's drive
+      const drive = await client.api(`/users/${user.id}/drive`).get();
+      drives.push({
+        id: drive.id,
+        ownerId: user.id,
+        ownerName: user.displayName || user.userPrincipalName,
+        siteName: drive.name,
+        siteUrl: drive.webUrl,
+        size: drive.quota?.used || 0,
+      });
+    } catch (err) {
+      // User may not have a drive provisioned; skip
+      continue;
+    }
+  }
+  return drives;
+}
+
 export async function getAuthenticatedClient() {
   const config = await prisma.configuration.findUnique({ where: { id: 1 } });
   if (!config) {

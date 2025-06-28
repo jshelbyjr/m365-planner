@@ -6,7 +6,7 @@ import { prisma } from '@/app/lib/prisma';
  * Returns a list of SharePoint Sites from the database.
  */
 export async function GET(req: NextRequest) {
-  // Fetch SharePoint sites from the database
+  // Fetch all SharePoint sites with all fields for export
   const sites = await prisma.sharePointSite.findMany();
   return NextResponse.json(sites);
 }
