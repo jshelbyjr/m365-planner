@@ -61,6 +61,7 @@ function getScanHandlers() {
     users: handleUsersScan,
     groups: handleGroupsScan,
     teams: handleTeamsScan,
+    sharepoint: handleSharePointScan,
     // Add more types here as needed
   };
 // Handler for teams scan
@@ -130,6 +131,50 @@ async function handleTeamsScan() {
         visibility: t.visibility,
         owners: { connect: t.ownerIds.map((id: string) => ({ id })) },
         members: { connect: t.memberIds.map((id: string) => ({ id })) },
+      }
+    });
+  }
+}
+// Handler for SharePoint scan
+async function handleSharePointScan() {
+  const client = await getAuthenticatedClient();
+  // Clear old SharePoint sites
+  await prisma.sharePointSite.deleteMany({});
+  // Fetch all SharePoint sites (sites endpoint)
+  let sitesResponse = await client.api('/sites?search=*').get();
+  const allSites = sitesResponse.value || [];
+  for (const site of allSites) {
+    // Fetch storage metrics (if available)
+    let storageUsed = null;
+    let storageLimit = null;
+    let filesCount = null;
+    let externalSharing = null;
+    try {
+      const storage = await client.api(`/sites/${site.id}/drive`).get();
+      storageUsed = storage?.quota?.used ? storage.quota.used / (1024 * 1024) : null; // MB
+      storageLimit = storage?.quota?.total ? storage.quota.total / (1024 * 1024) : null; // MB
+    } catch {}
+    // Fetch file count (count of items in root drive)
+    try {
+      const children = await client.api(`/sites/${site.id}/drive/root/children?$top=1&$count=true`).header('ConsistencyLevel', 'eventual').get();
+      filesCount = children['@odata.count'] ?? null;
+    } catch {}
+    // Fetch external sharing status (site sharing capability)
+    try {
+      const siteDetails = await client.api(`/sites/${site.id}`).get();
+      // This property may be named differently depending on the API, adjust as needed
+      externalSharing = siteDetails.sharingCapability ?? siteDetails.sharingStatus ?? null;
+    } catch {}
+    await prisma.sharePointSite.create({
+      data: {
+        id: site.id,
+        name: site.displayName ?? site.name ?? null,
+        url: site.webUrl ?? null,
+        storageUsed,
+        storageLimit,
+        filesCount,
+        externalSharing,
+        // Add more fields as needed
       }
     });
   }

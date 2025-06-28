@@ -1,5 +1,5 @@
-// file: app/Dashboard/Teams/page.tsx
-'use client';
+
+"use client";
 
 import { useEffect, useState } from 'react';
 import { Typography, CircularProgress } from '@mui/material';
@@ -7,37 +7,38 @@ import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
 
-interface Team {
+interface SharePointSite {
   id: string;
-  displayName: string;
-  description?: string;
-  visibility?: string;
-  memberCount?: number;
-  totalChannelCount?: number;
+  name?: string;
+  storageUsed?: number;
+  filesCount?: number;
+  externalSharing?: string;
+  teams?: string | null;
+  m365Group?: string | null;
 }
 
-export default function TeamsDetailPage() {
-  const [teams, setTeams] = useState<Team[]>([]);
+export default function SharePointDashboardPage() {
+  const [sites, setSites] = useState<SharePointSite[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
 
-  // Fetch Teams
+  // Fetch SharePoint sites
   useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const res = await fetch('/api/data/teams');
-        if (res.ok) {
-          const data = await res.json();
-          setTeams(Array.isArray(data) ? data : data.teams || []);
-        }
-      } finally {
-        setLoading(false);
+    const fetchSites = async () => {
+      setLoading(true);
+      const res = await fetch('/api/data/sharepoint');
+      if (res.ok) {
+        const allSites: SharePointSite[] = await res.json();
+        // Only show sites not related to Teams or M365 Groups
+        const filtered = allSites.filter(site => !site.teams && !site.m365Group);
+        setSites(filtered);
       }
+      setLoading(false);
     };
-    fetchTeams();
+    fetchSites();
   }, []);
 
-  // Fetch scan status for teams
+  // Fetch scan status for SharePoint
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchScanStatus = async () => {
@@ -45,12 +46,13 @@ export default function TeamsDetailPage() {
       if (res.ok) {
         const status = await res.json();
         setScanStatus(status);
-        // If scan just completed, refresh teams
+        // If scan just completed, refresh sites
         if (status.status === 'COMPLETED') {
-          const teamsRes = await fetch('/api/data/teams');
-          if (teamsRes.ok) {
-            const data = await teamsRes.json();
-            setTeams(Array.isArray(data) ? data : data.teams || []);
+          const sitesRes = await fetch('/api/data/sharepoint');
+          if (sitesRes.ok) {
+            const allSites: SharePointSite[] = await sitesRes.json();
+            const filtered = allSites.filter(site => !site.teams && !site.m365Group);
+            setSites(filtered);
           }
         }
       }
@@ -67,14 +69,15 @@ export default function TeamsDetailPage() {
     const res = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataType: 'teams' })
+      body: JSON.stringify({ dataType: 'sharepoint' })
     });
     if (res.ok) {
-      // Optionally refetch teams after scan
-      const teamsRes = await fetch('/api/data/teams');
-      if (teamsRes.ok) {
-        const data = await teamsRes.json();
-        setTeams(Array.isArray(data) ? data : data.teams || []);
+      // Optionally refetch sites after scan
+      const sitesRes = await fetch('/api/data/sharepoint');
+      if (sitesRes.ok) {
+        const allSites: SharePointSite[] = await sitesRes.json();
+        const filtered = allSites.filter(site => !site.teams && !site.m365Group);
+        setSites(filtered);
       }
       // Refetch scan status
       const statusRes = await fetch('/api/scan');
@@ -84,36 +87,32 @@ export default function TeamsDetailPage() {
     }
   };
 
-  // Define columns to display in the DataTable
   const columns = [
-    { key: 'displayName', label: 'Display Name' },
-    { key: 'description', label: 'Description' },
-    { key: 'visibility', label: 'Visibility' },
-    { key: 'memberCount', label: 'Member Count' },
-    { key: 'totalChannelCount', label: 'Total Channels' },
+    { key: 'name', label: 'Site Name' },
+    { key: 'storageUsed', label: 'Storage (MB)' },
+    { key: 'filesCount', label: 'Files' },
+    { key: 'externalSharing', label: 'External Sharing' },
   ];
 
-  // Handler to fetch all teams and export as CSV
-  const handleExportAllTeams = async () => {
-    const res = await fetch('/api/data/teams');
+  // Handler to fetch all SharePoint sites and export as CSV
+  const handleExportAllSites = async () => {
+    const res = await fetch('/api/data/sharepoint');
     if (res.ok) {
-      const data = await res.json();
-      // Some APIs return { teams: [...] }, others may return differently
-      return Array.isArray(data) ? data : data.teams || data;
+      const allSites: SharePointSite[] = await res.json();
+      return allSites.filter(site => !site.teams && !site.m365Group);
     }
     return [];
   };
 
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-bold mb-4 flex items-center">Microsoft Teams
+      <h1 className="text-2xl font-bold mb-4 flex items-center">SharePoint Sites
         <ExportCSVButton
-          data={teams}
+          data={sites}
           columns={columns}
-          fileName="teams.csv"
-          // Fetch all data on export
+          fileName="sharepoint-sites.csv"
           // @ts-ignore
-          fetchAllData={handleExportAllTeams}
+          fetchAllData={handleExportAllSites}
         />
       </h1>
       <div className="mb-6">
@@ -136,9 +135,12 @@ export default function TeamsDetailPage() {
         <CircularProgress />
       ) : (
         <DataTable
-          title={`Teams (${teams.length})`}
-          data={teams}
-          displayKey="displayName"
+          title={`SharePoint Sites (${sites.length})`}
+          data={sites.map(site => ({
+            ...site,
+            storageUsed: site.storageUsed !== undefined && site.storageUsed !== null ? site.storageUsed.toLocaleString() : '-',
+          }))}
+          displayKey="name"
           columns={columns}
         />
       )}

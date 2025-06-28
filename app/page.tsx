@@ -9,14 +9,18 @@ import TotalsCards from './Components/TotalsCards';
 
 type User = { id: string; displayName: string; userPrincipalName: string; accountEnabled: boolean };
 type Group = { id: string; displayName: string };
+
 type Team = { id: string; displayName: string; description?: string; visibility?: string };
+type SharePointSite = { id: string; name?: string; };
 
 export default function DashboardPage() {
+
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [m365Groups, setM365Groups] = useState<Group[]>([]);
   const [securityGroups, setSecurityGroups] = useState<Group[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [sharePointSites, setSharePointSites] = useState<SharePointSite[]>([]);
 
   // Fetch users, groups, and teams on mount
   useEffect(() => {
@@ -42,13 +46,23 @@ export default function DashboardPage() {
         const res = await fetch('/api/data/teams');
         if (res.ok) {
           const data = await res.json();
-          setTeams(data.teams || []);
+          // Handle both array and object response shapes
+          setTeams(Array.isArray(data) ? data : data.teams || []);
         }
       } catch (e) {}
     };
     fetchUsers();
     fetchGroups();
     fetchTeams();
+    const fetchSharePointSites = async () => {
+      try {
+        const res = await fetch('/api/data/sharepoint');
+        if (res.ok) {
+          setSharePointSites(await res.json());
+        }
+      } catch (e) {}
+    };
+    fetchSharePointSites();
   }, []);
 
 
@@ -60,6 +74,7 @@ export default function DashboardPage() {
             { label: 'Total Users', count: users.length },
             { label: 'Total M365 Groups', count: m365Groups.length },
             { label: 'Total Teams', count: teams.length },
+            { label: 'Total SharePoint Sites', count: sharePointSites.length },
           ]}
         />
         {/* DataTables moved to their own pages */}

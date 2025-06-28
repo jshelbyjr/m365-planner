@@ -74,3 +74,26 @@ model SecurityGroup {
   isDistributionGroup Boolean // true for Distribution, false for Security
   memberCount         Int?
 }
+
+// Model for SharePoint Sites
+model SharePointSite {
+  id                String   @id @unique // Site ID
+  name              String?
+  url               String?
+  teams             String? // Comma-separated Team IDs or names
+  channelSite       Boolean? // Is this a Teams channel site?
+  storageUsed       Float?
+  hub               String?
+  template          String?
+  lastActivity      DateTime?
+  dateCreated       DateTime?
+  storageLimit      Float?
+  storageUsedPct    Float?
+  m365Group         String? // M365 Group ID or name
+  filesViewedEdited Int?
+  pageViews         Int?
+  pageVisits        Int?
+  filesCount        Int?
+  sensitivity       String?
+  externalSharing   String?
+}

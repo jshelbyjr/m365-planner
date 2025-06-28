@@ -20,7 +20,7 @@ const navSections = [
     header: 'Collab/Storage',
     items: [
       { label: 'OneDrive', href: '#' },
-      { label: 'SharePoint Sites', href: '#' },
+      { label: 'SharePoint Sites', href: '/Dashboard/SharePoint' },
       { label: 'M365 Groups', href: '/Dashboard/Groups' },
       { label: 'Microsoft Teams', href: '/Dashboard/Teams' },
     ],
