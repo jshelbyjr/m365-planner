@@ -40,7 +40,10 @@ This guide outlines all the steps and files you need to update when adding a new
 
 
 
-- [ ] Document new endpoints and permissions in `README.md` and `docs/api-overview.md`
+- [ ] Add new API endpoint path and status string (if needed) to `app/lib/constants.ts`.
+- [ ] Document new endpoints and permissions in `README.md` and `docs/api-overview.md`.
+-
+> **Note:** All API endpoint paths and status strings should be added to `app/lib/constants.ts` and referenced throughout the codebase. Do not hardcode these values.
 ---
 
 - Add more details or examples as needed for your team.

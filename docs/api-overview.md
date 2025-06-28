@@ -5,6 +5,13 @@ This document provides an overview of the main API endpoints, their purposes, an
 
 ---
 
+
+## API Endpoints & Status Constants
+
+All API endpoint paths and status strings are defined in `app/lib/constants.ts` as constants and enums. Use these in your code instead of hardcoding strings.
+
+---
+
 ## API Endpoints
 
 | Endpoint                | Method | Purpose                                 | MS Graph API Endpoint(s)         | Minimum Permission |

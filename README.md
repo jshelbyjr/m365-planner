@@ -44,6 +44,18 @@ M365 Planner is a dashboard for managing and visualizing Microsoft 365 tenant da
 ---
 
 
+
+## API Endpoints & Status Constants
+
+All API endpoint paths and common status strings are defined in `app/lib/constants.ts` as constants and enums. Reference these throughout the app to avoid typos and ease refactoring. Do not hardcode endpoint paths or status strings.
+
+Example:
+```ts
+import { API_ENDPOINTS, Status } from './app/lib/constants';
+fetch(API_ENDPOINTS.DATA.USERS);
+if (status === Status.SUCCESS) { /* ... */ }
+```
+
 ## API Endpoints & Permissions
 
 The scan logic is now modular: each scan type is implemented as a function in `app/lib/scan.service.ts` and registered in the `scanHandlers` map. To add a new scan type, add a function and register it in that file.
