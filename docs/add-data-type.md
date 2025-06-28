@@ -39,10 +39,13 @@ This guide outlines all the steps and files you need to update when adding a new
 - Create a new page: `app/Dashboard/Teams/page.tsx` (replace `Teams` with your data type).
 - Implement the UI to display/manage the new data type.
 
-## 6. (Optional) Update or Add Frontend Components
+## 6. Add Link to Sidebar
+- Add or update link to dashboard page in sidebar component: `app/components/sidebar.tsx` (replace `Teams` with your data type).
+
+## 7. (Optional) Update or Add Frontend Components
 - If needed, create or update components in `app/Components/` to support the new data type.
 
-## 7. (Optional) Add or Update Tests
+## 8. (Optional) Add or Update Tests
 - Add or update tests to cover the new data type and its API endpoints.
 
 ---
@@ -54,6 +57,7 @@ This guide outlines all the steps and files you need to update when adding a new
 - [ ] Update scan handler and mapping
 - [ ] Add API route for new data type
 - [ ] Add dashboard page
+- [ ] Add/update link in Sidebar component
 - [ ] Update/add frontend components (if needed)
 - [ ] Add/update tests (if needed)
 - [ ] Document new endpoints and permissions in `README.md` and `docs/api-overview.md`
