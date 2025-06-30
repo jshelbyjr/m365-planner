@@ -42,10 +42,8 @@ export async function GET() {
         return NextResponse.json({ error: `Failed to get token: ${tokenData.error_description}` }, { status: response.status });
     }
 
-    // You can optionally try a simple Graph API call here, but for now, just getting the token is a great test.
-    // For example, fetching the tenant organization details.
-    
-    return NextResponse.json({ status: Status.SUCCESS });
+    // Return a clear success message for the UI
+    return NextResponse.json({ status: Status.SUCCESS, message: 'Successfully obtained access token from Microsoft.' });
 
   } catch (error: any) {
     return NextResponse.json({ status: Status.ERROR, error: error.message }, { status: 500 });
