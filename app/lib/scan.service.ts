@@ -1,22 +1,24 @@
 // #microsoft.docs.mcp: Power Platform API integration
+
 import * as powerPlatform from '@/app/lib/powerPlatform.service';
+import { prisma } from '@/app/lib/prisma';
+import { getAuthenticatedClient } from '@/app/lib/graph.service';
+import { fetchExchangeMailboxUsage } from '../../lib/graph.service';
+import { paginatedScan } from '@/app/lib/paginatedScan';
 
 /**
  * Handler for PowerApps scan (Power Platform Admin API)
  * #microsoft.docs.mcp
  */
-export async function scanPowerApps() {
-  // Always get a fresh Power Platform API token
-  const accessToken = await powerPlatform.getPowerPlatformAccessToken();
-
+export async function scanPowerApps(accessToken?: string) {
+  if (!accessToken) throw new Error('Power Platform access token required');
   // Fetch all environments (should return an array)
-  const environments = (await powerPlatform.fetchPowerPlatformEnvironments(accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+  const environments = (await powerPlatform.fetchPowerPlatformEnvironments(accessToken) as unknown) as any[];
   if (!environments || !Array.isArray(environments)) return;
-
   await prisma.powerApp.deleteMany({});
   for (const env of environments) {
     // Fetch all PowerApps for this environment (should return an array)
-    const apps = (await powerPlatform.fetchPowerAppsForEnvironment(env.id, accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+    const apps = (await powerPlatform.fetchPowerAppsForEnvironment(env.id, accessToken) as unknown) as any[];
     if (!apps || !Array.isArray(apps)) continue;
     for (const app of apps) {
       await prisma.powerApp.upsert({
@@ -26,26 +28,23 @@ export async function scanPowerApps() {
       });
     }
   }
-}
+
 
 /**
  * Handler for PowerAutomate scan (Power Platform Admin API)
  * #microsoft.docs.mcp
  */
-export async function scanPowerAutomate() {
-  // Always get a fresh Power Platform API token
-  const accessToken = await powerPlatform.getPowerPlatformAccessToken();
-
+export async function scanPowerAutomate(accessToken?: string) {
+  if (!accessToken) throw new Error('Power Platform access token required');
   // Fetch all environments (should return an array)
-  const environments = (await powerPlatform.fetchPowerPlatformEnvironments(accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+  const environments = (await powerPlatform.fetchPowerPlatformEnvironments(accessToken) as unknown) as any[];
   if (!environments || !Array.isArray(environments)) return;
-
   await prisma.powerAutomateFlow.deleteMany({});
   for (const env of environments) {
     // region may be needed for API endpoint
     const region = env.region || '';
     // Fetch all Flows for this environment (should return an array)
-    const flows = (await powerPlatform.fetchFlowsForEnvironment(env.id, region, accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+    const flows = (await powerPlatform.fetchFlowsForEnvironment(env.id, region, accessToken) as unknown) as any[];
     if (!flows || !Array.isArray(flows)) continue;
     for (const flow of flows) {
       await prisma.powerAutomateFlow.upsert({
@@ -55,12 +54,8 @@ export async function scanPowerAutomate() {
       });
     }
   }
-}
-import { fetchExchangeMailboxUsage } from '@/lib/graph.service';
-
-/**
- * Handler for Exchange Mailboxes scan
- */
+// End of file
+// Handler for Exchange Mailboxes scan
 export async function scanExchangeMailboxes() {
   // Get authenticated Microsoft Graph client
   const client = await (await import('@/app/lib/graph.service')).getAuthenticatedClient();
@@ -77,7 +72,7 @@ export async function scanExchangeMailboxes() {
       create: { ...mb, id: mb.id },
     });
   }
-}
+// End of file
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
@@ -87,15 +82,7 @@ async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
 }
 // file: lib/scan.service.ts
 // Modular scan logic for each asset type in M365 Planner
-import { prisma } from '@/app/lib/prisma';
-import { getAuthenticatedClient } from '@/app/lib/graph.service';
-
-
-/**
- * Handler for Domains scan
- */
-
-
+// Handler for Domains scan
 export async function scanDomains() {
   const client = await getAuthenticatedClient();
   await prisma.domain.deleteMany({});
@@ -295,8 +282,6 @@ export async function scanSharePoint() {
  * Handler for Users scan
  */
 
-import { paginatedScan } from '@/app/lib/paginatedScan';
-
 export async function scanUsers() {
   const client = await getAuthenticatedClient();
   await prisma.user.deleteMany({});
@@ -324,7 +309,7 @@ export async function scanUsers() {
       console.log(`[scanUsers] Page ${page}, Total users: ${total}`);
     },
   });
-}
+// End of file
 
 /**
  * Handler for Groups scan
@@ -570,29 +555,36 @@ export async function denormalizeSharePointUsageUrls() {
 /**
  * Map of scan handlers by type
  */
-export const scanHandlers: { [key: string]: () => Promise<void> } = {
-  users: scanUsers,
-  groups: scanGroups,
-  teams: scanTeams,
-  sharepoint: scanSharePoint,
-  onedrive: scanOneDrive,
-  licenses: scanLicenses,
-  domains: scanDomains,
+export const scanHandlers: { [key: string]: (accessToken?: string) => Promise<void> } = {
+  users: () => scanUsers(),
+  groups: () => scanGroups(),
+  teams: () => scanTeams(),
+  sharepoint: () => scanSharePoint(),
+  onedrive: () => scanOneDrive(),
+  licenses: () => scanLicenses(),
+  domains: () => scanDomains(),
   sharepointUsage: async () => {
     await scanSharePoint();
     await scanSharePointUsage();
     await denormalizeSharePointUsageUrls();
   },
-  exchangeMailboxes: scanExchangeMailboxes,
-  powerapps: scanPowerApps,
-  powerautomate: scanPowerAutomate,
+  exchangeMailboxes: () => scanExchangeMailboxes(),
+  powerapps: (accessToken?: string) => scanPowerApps(accessToken),
+  powerautomate: (accessToken?: string) => scanPowerAutomate(accessToken),
 };
 
 /**
  * Main scan runner, dispatches to the correct handler
  */
-export async function runScan(dataType: string) {
+export async function runScan(dataType: string, accessToken?: string) {
   const handler = scanHandlers[dataType];
   if (!handler) throw new Error(`No handler for scan type: ${dataType}`);
-  await handler();
+  // For Power Platform types, pass accessToken
+  if (['powerapps', 'powerautomate'].includes(dataType)) {
+    await handler(accessToken);
+  } else {
+    await handler();
+  }
 }
+
+export { scanHandlers, runScan };

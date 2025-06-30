@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
+import { getDelegatedPowerPlatformAccessToken } from '../../lib/msalClient';
 
 type PowerAppRow = {
   id: string;
@@ -72,15 +73,21 @@ export default function PowerAppsDashboard() {
   const handleStartScan = async () => {
     setScanStarted(true);
     setScanStatus({ status: 'IN_PROGRESS' });
-    const res = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataType: 'powerapps' })
-    });
-    if (res.ok) {
-      setScanStatus({ status: 'IN_PROGRESS' });
-    } else {
-      setScanStatus({ status: 'FAILED', error: 'Scan failed' });
+    try {
+      // Acquire delegated access token on the client
+      const accessToken = await getDelegatedPowerPlatformAccessToken();
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataType: 'powerapps', accessToken })
+      });
+      if (res.ok) {
+        setScanStatus({ status: 'IN_PROGRESS' });
+      } else {
+        setScanStatus({ status: 'FAILED', error: 'Scan failed' });
+      }
+    } catch (err: any) {
+      setScanStatus({ status: 'FAILED', error: err.message || 'Authentication failed' });
     }
   };
 
