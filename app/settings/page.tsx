@@ -96,11 +96,12 @@ export default function HomePage() {
             <input
               id="clientSecret"
               type="password"
-              value={clientSecret}
+              value={clientSecret ?? ''}
               onChange={(e) => setClientSecret(e.target.value)}
               placeholder="Enter secret to save/update"
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
+              autoComplete="current-password"
             />
           </div>
           <button

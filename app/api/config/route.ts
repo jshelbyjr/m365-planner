@@ -1,7 +1,9 @@
 // file: app/api/config/route.ts
+
 import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { Status } from '../../lib/constants';
+import { encrypt, decrypt } from '../../lib/encryption';
 
 const prisma = new PrismaClient();
 
@@ -12,9 +14,10 @@ export async function GET() {
       where: { id: 1 },
     });
     if (config) {
-      // Return the config but omit the client secret for security
+      // Decrypt clientSecret if present, but do not return it in the response
       const { clientSecret, ...safeConfig } = config;
-      return NextResponse.json({ status: Status.SUCCESS, config: safeConfig });
+      // Optionally, you could return a flag indicating if a secret is set
+      return NextResponse.json({ status: Status.SUCCESS, config: { ...safeConfig, hasClientSecret: !!clientSecret } });
     }
     return NextResponse.json(null);
   } catch (error) {
@@ -32,12 +35,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
+    // Encrypt the clientSecret before saving
+    const encryptedSecret = encrypt(clientSecret);
+
     // Using "upsert" is perfect here: it creates the record if it doesn't exist,
     // or updates it if it does. We only ever have one configuration record (id: 1).
-    const savedConfig = await prisma.configuration.upsert({
+    await prisma.configuration.upsert({
       where: { id: 1 },
-      update: { tenantId, clientId, clientSecret },
-      create: { id: 1, tenantId, clientId, clientSecret },
+      update: { tenantId, clientId, clientSecret: encryptedSecret },
+      create: { id: 1, tenantId, clientId, clientSecret: encryptedSecret },
     });
 
     return NextResponse.json({ message: 'Configuration saved successfully.' });

@@ -1,7 +1,9 @@
 // file: lib/graph.service.ts
+
 import { PrismaClient } from '@prisma/client';
 import { ClientSecretCredential } from '@azure/identity';
 import { Client } from '@microsoft/microsoft-graph-client';
+import { decrypt } from './encryption';
 import 'isomorphic-fetch'; // Required polyfill for the graph client
 
 const prisma = new PrismaClient();
@@ -49,11 +51,16 @@ export async function getAuthenticatedClient() {
   }
 
   const { tenantId, clientId, clientSecret } = config;
+  if (!clientSecret) {
+    throw new Error('Client secret is not set.');
+  }
+  // Decrypt the client secret before use
+  const decryptedSecret = decrypt(clientSecret);
 
   const credential = new ClientSecretCredential(
     tenantId,
     clientId,
-    clientSecret
+    decryptedSecret
   );
 
   const client = Client.initWithMiddleware({
