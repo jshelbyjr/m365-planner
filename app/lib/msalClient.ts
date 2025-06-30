@@ -1,17 +1,10 @@
 
 import { PublicClientApplication, AccountInfo, AuthenticationResult } from '@azure/msal-browser';
 
-// MSAL configuration for Azure AD app registration
-const msalConfig = {
-  auth: {
-    clientId: process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID || '',
-    authority: process.env.NEXT_PUBLIC_AZURE_AD_AUTHORITY || 'https://login.microsoftonline.com/common',
-    redirectUri: typeof window !== 'undefined' ? window.location.origin : '',
-  },
-  cache: {
-    cacheLocation: 'localStorage',
-    storeAuthStateInCookie: false,
-  },
+
+type MsalConfigParams = {
+  clientId: string;
+  tenantId: string;
 };
 
 const loginRequest = {
@@ -24,31 +17,60 @@ const loginRequest = {
 };
 
 /**
- * Returns a singleton MSAL PublicClientApplication instance, only on the client.
+ * Initializes and returns a singleton MSAL PublicClientApplication instance with dynamic config.
+ * @param clientId Azure AD Application (client) ID
+ * @param tenantId Azure AD Tenant ID
  */
-function getMsalInstance(): PublicClientApplication {
+export async function getMsalInstanceWithConfig({ clientId, tenantId }: MsalConfigParams): Promise<PublicClientApplication> {
   if (typeof window === 'undefined') {
     throw new Error('MSAL PublicClientApplication must only be initialized on the client');
   }
+  const authority = `https://login.microsoftonline.com/${tenantId}`;
+  const msalConfig = {
+    auth: {
+      clientId,
+      authority,
+      redirectUri: window.location.origin,
+    },
+    cache: {
+      cacheLocation: 'localStorage',
+      storeAuthStateInCookie: false,
+    },
+  };
+  // Use a unique key per config to support multi-tenant scenarios
+  const instanceKey = `__msalInstance_${clientId}_${tenantId}`;
   // @ts-ignore
-  if (!window.__msalInstance) {
+  if (!window[instanceKey]) {
     // @ts-ignore
-    window.__msalInstance = new PublicClientApplication(msalConfig);
+    window[instanceKey] = new PublicClientApplication(msalConfig);
+    // @ts-ignore
+    window[`${instanceKey}Initialized`] = false;
   }
   // @ts-ignore
-  return window.__msalInstance;
+  if (!window[`${instanceKey}Initialized`]) {
+    // @ts-ignore
+    await window[instanceKey].initialize();
+    // @ts-ignore
+    window[`${instanceKey}Initialized`] = true;
+  }
+  // @ts-ignore
+  return window[instanceKey];
 }
+
+// ...existing code...
 
 /**
  * Acquire a delegated access token for Power Platform API using MSAL.
  * If the user is not signed in, triggers interactive login.
+ * @param clientId Azure AD Application (client) ID
+ * @param tenantId Azure AD Tenant ID
  * @returns Access token string
  */
-export async function getDelegatedPowerPlatformAccessToken(): Promise<string> {
+export async function getDelegatedPowerPlatformAccessToken(clientId: string, tenantId: string): Promise<string> {
   if (typeof window === 'undefined') {
     throw new Error('getDelegatedPowerPlatformAccessToken must only be called on the client');
   }
-  const msalInstance = getMsalInstance();
+  const msalInstance = await getMsalInstanceWithConfig({ clientId, tenantId });
   const accounts = msalInstance.getAllAccounts();
   let account: AccountInfo | undefined = accounts[0];
 

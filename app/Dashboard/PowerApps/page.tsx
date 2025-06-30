@@ -6,6 +6,7 @@ import DataTable from '../../Components/DataTable';
 import DataCollectionCard, { ScanStatus } from '../../Components/DataCollectionCard';
 import ExportCSVButton from '../../Components/ExportCSVButton';
 import { getDelegatedPowerPlatformAccessToken } from '../../lib/msalClient';
+import { useAzureAdConfig } from '../../lib/useAzureAdConfig';
 
 type PowerAppRow = {
   id: string;
@@ -24,6 +25,7 @@ export default function PowerAppsDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [scanStarted, setScanStarted] = useState(false);
+  const { clientId, tenantId, loading: configLoading, error: configError } = useAzureAdConfig();
 
   // Fetch Power Apps data
   const fetchData = async () => {
@@ -71,11 +73,15 @@ export default function PowerAppsDashboard() {
   }, []);
 
   const handleStartScan = async () => {
+    if (!clientId || !tenantId) {
+      setScanStatus({ status: 'FAILED', error: 'Azure AD config not loaded' });
+      return;
+    }
     setScanStarted(true);
     setScanStatus({ status: 'IN_PROGRESS' });
     try {
       // Acquire delegated access token on the client
-      const accessToken = await getDelegatedPowerPlatformAccessToken();
+      const accessToken = await getDelegatedPowerPlatformAccessToken(clientId, tenantId);
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,9 +128,11 @@ export default function PowerAppsDashboard() {
       <div className="mb-6">
         <DataCollectionCard
           scanStatus={scanStarted ? scanStatus : null}
-          onStartScan={handleStartScan}
+          onStartScan={configLoading ? () => {} : handleStartScan}
           renderStatus={() => (
             <>
+              {configLoading && <span className="text-gray-600">Loading Azure AD config...</span>}
+              {configError && <span className="text-red-600">Config error: {configError}</span>}
               {scanStatus?.status === 'COMPLETED' && scanStatus.completedAt && (
                 <span className="text-green-600">Last scan: {new Date(scanStatus.completedAt).toLocaleString()}</span>
               )}
