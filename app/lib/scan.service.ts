@@ -1,3 +1,63 @@
+// #microsoft.docs.mcp: Power Platform API integration
+import * as powerPlatform from '@/app/lib/powerPlatform.service';
+
+/**
+ * Handler for PowerApps scan (Power Platform Admin API)
+ * #microsoft.docs.mcp
+ */
+export async function scanPowerApps() {
+  // TODO: Implement authentication to get accessToken for Power Platform API
+  const accessToken = process.env.POWER_PLATFORM_API_TOKEN || '';
+  if (!accessToken) throw new Error('Power Platform API access token not set');
+
+  // TODO: Fetch all environments (should return an array)
+  const environments = (await powerPlatform.fetchPowerPlatformEnvironments(accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+  if (!environments || !Array.isArray(environments)) return;
+
+  await prisma.powerApp.deleteMany({});
+  for (const env of environments) {
+    // TODO: Fetch all PowerApps for this environment (should return an array)
+    const apps = (await powerPlatform.fetchPowerAppsForEnvironment(env.id, accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+    if (!apps || !Array.isArray(apps)) continue;
+    for (const app of apps) {
+      await prisma.powerApp.upsert({
+        where: { id: app.id },
+        update: app,
+        create: { ...app, environmentId: env.id },
+      });
+    }
+  }
+}
+
+/**
+ * Handler for PowerAutomate scan (Power Platform Admin API)
+ * #microsoft.docs.mcp
+ */
+export async function scanPowerAutomate() {
+  // TODO: Implement authentication to get accessToken for Power Platform API
+  const accessToken = process.env.POWER_PLATFORM_API_TOKEN || '';
+  if (!accessToken) throw new Error('Power Platform API access token not set');
+
+  // TODO: Fetch all environments (should return an array)
+  const environments = (await powerPlatform.fetchPowerPlatformEnvironments(accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+  if (!environments || !Array.isArray(environments)) return;
+
+  await prisma.powerAutomateFlow.deleteMany({});
+  for (const env of environments) {
+    // TODO: region may be needed for API endpoint
+    const region = env.region || '';
+    // TODO: Fetch all Flows for this environment (should return an array)
+    const flows = (await powerPlatform.fetchFlowsForEnvironment(env.id, region, accessToken) as unknown) as any[]; // TODO: Remove 'as unknown as any[]' when implemented
+    if (!flows || !Array.isArray(flows)) continue;
+    for (const flow of flows) {
+      await prisma.powerAutomateFlow.upsert({
+        where: { id: flow.id },
+        update: flow,
+        create: { ...flow, environmentId: env.id },
+      });
+    }
+  }
+}
 import { fetchExchangeMailboxUsage } from '@/lib/graph.service';
 
 /**
@@ -526,6 +586,8 @@ export const scanHandlers: { [key: string]: () => Promise<void> } = {
     await denormalizeSharePointUsageUrls();
   },
   exchangeMailboxes: scanExchangeMailboxes,
+  powerapps: scanPowerApps,
+  powerautomate: scanPowerAutomate,
 };
 
 /**
