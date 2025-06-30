@@ -28,7 +28,7 @@ export async function scanPowerApps(accessToken?: string) {
       });
     }
   }
-
+}
 
 /**
  * Handler for PowerAutomate scan (Power Platform Admin API)
@@ -54,7 +54,7 @@ export async function scanPowerAutomate(accessToken?: string) {
       });
     }
   }
-// End of file
+}
 // Handler for Exchange Mailboxes scan
 export async function scanExchangeMailboxes() {
   // Get authenticated Microsoft Graph client
@@ -72,7 +72,7 @@ export async function scanExchangeMailboxes() {
       create: { ...mb, id: mb.id },
     });
   }
-// End of file
+}
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
@@ -309,7 +309,7 @@ export async function scanUsers() {
       console.log(`[scanUsers] Page ${page}, Total users: ${total}`);
     },
   });
-// End of file
+}
 
 /**
  * Handler for Groups scan
@@ -587,4 +587,3 @@ export async function runScan(dataType: string, accessToken?: string) {
   }
 }
 
-export { scanHandlers, runScan };
