@@ -52,6 +52,8 @@ model User {
   ownerOfGroups     M365Group[] @relation("GroupOwners")
   memberOfTeams     Team[]      @relation("TeamMembers")
   ownerOfTeams      Team[]      @relation("TeamOwners")
+  ownedPowerApps    PowerApp[]  @relation("PowerAppOwner")
+  ownedFlows        PowerAutomateFlow[] @relation("PowerAutomateFlowOwner")
 }
 
 model M365Group {
@@ -159,4 +161,44 @@ model ExchangeMailbox {
   recipientType             String?
   reportPeriod              String?
   reportRefreshDate         DateTime?
+}
+
+// Power Platform Models
+model PowerPlatformEnvironment {
+  id            String   @id @unique // Environment ID
+  name          String?
+  type          String? // Production, Sandbox, etc.
+  region        String?
+  capacity      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  powerApps     PowerApp[]
+  flows         PowerAutomateFlow[]
+}
+
+model PowerApp {
+  id            String   @id @unique // App ID
+  name          String?
+  type          String? // Canvas, Model-driven, etc.
+  environmentId String
+  environment   PowerPlatformEnvironment @relation(fields: [environmentId], references: [id])
+  ownerId       String?
+  owner         User?    @relation("PowerAppOwner", fields: [ownerId], references: [id])
+  lastAccessed  DateTime?
+  connection    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PowerAutomateFlow {
+  id            String   @id @unique // Flow ID
+  name          String?
+  environmentId String
+  environment   PowerPlatformEnvironment @relation(fields: [environmentId], references: [id])
+  ownerId       String?
+  owner         User?    @relation("PowerAutomateFlowOwner", fields: [ownerId], references: [id])
+  lastRunTime   DateTime?
+  connection    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
